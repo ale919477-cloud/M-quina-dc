@@ -91,12 +91,12 @@
                     <div class="input-group" style="grid-column: span 2;">
                         <label>Tipo de Señal V_a</label>
                         <select id="signal_type" onchange="actualizarInfoOnda()">
-                            <option value="step">Escalón Unitario (Respuesta transitoria extrema)</option>
-                            <option value="square">Onda Cuadrada (Simulación PWM a baja frecuencia)</option>
-                            <option value="ramp">Rampa (Arranque suave sin pico de corriente)</option>
-                            <option value="triangle">Onda Triangular (Barrido de aceleración y frenado)</option>
-                            <option value="peru">Onda Rectificada (Efecto de rizado en Red Perú 60Hz)</option>
-                            <option value="constant">Régimen Permanente (Punto de operación final estacionario)</option>
+                            <option value="step">Escalón Unitario</option>
+                            <option value="square">Onda Cuadrada</option>
+                            <option value="ramp">Rampa</option>
+                            <option value="triangle">Onda Triangular</option>
+                            <option value="peru">Onda Rectificada</option>
+                            <option value="constant">Régimen Permanente</option>
                         </select>
                     </div>
                 </div>
@@ -142,7 +142,7 @@
                     <canvas id="chartW"></canvas>
                 </div>
                 <div class="chart-caption">
-                    <strong>Gráfica de Velocidad Angular ($\omega$):</strong> Representa el comportamiento mecánico del eje del motor (aceleración y desaceleración) medido en $\text{rad/s}$.
+                    <strong>Gráfica de Velocidad Angular (ω):</strong> Representa el comportamiento mecánico del eje del motor (aceleración y desaceleración) medido en rad/s.
                 </div>
             </div>
             <div class="chart-container">
@@ -150,7 +150,7 @@
                     <canvas id="chartIa"></canvas>
                 </div>
                 <div class="chart-caption">
-                    <strong>Gráfica de Corriente de Armadura ($I_a$):</strong> Representa el consumo eléctrico del motor y muestra los picos transitorios medidos en Amperios.
+                    <strong>Gráfica de Corriente de Armadura (Ia):</strong> Representa el consumo eléctrico del motor y muestra los picos transitorios medidos en Amperios.
                 </div>
             </div>
         </div>
@@ -300,17 +300,17 @@
             let current_tl = 0;
             if (conCarga) {
                 let t_start = p.t_load;
-                let trans_duration = p.signal_type === 'peru' ? 0.02 : 1.0; // Duración de la transición suave de entrada de carga
+                let trans_duration = p.signal_type === 'peru' ? 0.02 : 1.0; 
                 
                 if (t < t_start) {
                     current_tl = 0;
                 } else if (t >= t_start && t <= t_start + trans_duration) {
-                    current_tl = p.t_l * ((t - t_start) / trans_duration); // Entra de forma gradual y lenta
+                    current_tl = p.t_l * ((t - t_start) / trans_duration); 
                 } else {
-                    current_tl = p.t_l; // Carga nominal completa
+                    current_tl = p.t_l; 
                 }
             } else {
-                current_tl = 0; // Sin carga absoluta
+                current_tl = 0; 
             }
 
             let dia_dt = (va_t - p.r_a * ia - p.k_v * w * If) / p.l_a;
