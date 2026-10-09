@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Simulador de Motor DC - Animación Progresiva y Comparativa</title>
+    <title>Simulador de Motor DC - Comparativa Animada</title>
     <!-- Librería de Gráficas -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -33,8 +33,6 @@
         .btn-calc:hover { background: #138496; }
         .btn-insert { background: #fd7e14; }
         .btn-insert:hover { background: #e26b0b; }
-        .btn-animate { background: #e83e8c; }
-        .btn-animate:hover { background: #d91a72; }
         .btn-save { background: #28a745; }
         .btn-save:hover { background: #218838; }
         .btn-save:disabled { background: #6c757d; cursor: not-allowed; opacity: 0.6; }
@@ -108,9 +106,8 @@
 
                 <!-- BOTONES -->
                 <div class="action-buttons">
-                    <button class="btn btn-calc" onclick="calcularGrafica(false)">Calc. Rápido</button>
-                    <button class="btn btn-insert" onclick="calcularGrafica(true)">Con Carga</button>
-                    <button class="btn btn-animate" onclick="animarGrafica(true)">▶ Animar</button>
+                    <button class="btn btn-calc" onclick="calcularGrafica(false)">Calcular Sin Carga</button>
+                    <button class="btn btn-insert" onclick="calcularGrafica(true)">Calcular Con Carga</button>
                     <button class="btn btn-save" id="btnGuardar" onclick="guardarSimulacion()" disabled>Guardar</button>
                 </div>
             </div>
@@ -359,44 +356,6 @@
         document.getElementById('btnGuardar').disabled = false;
     }
 
-    function animarGrafica(conCarga) {
-        if (animacionInterval) clearInterval(animacionInterval);
-        const params = obtenerDatos();
-        const results = ejecutarModelo(params, conCarga);
-
-        let labelCorto = waveInfoData[params.signal_type].title;
-        let titulo_etiqueta = `${labelCorto} (Animado) | Va:${params.v_a}V`;
-        titulo_etiqueta += conCarga ? ` | Carga: ${params.t_l}N·m (t=${params.t_load}s)` : ` | Sin Carga`;
-
-        simulacionActual = { params, dataVa: results.dataVa, dataW: results.dataW, dataIa: results.dataIa, label: titulo_etiqueta };
-
-        chartVaInstance.data.datasets = [{ label: `Voltaje - ${titulo_etiqueta}`, borderColor: '#28a745', borderWidth: 2, data: [] }];
-        chartWInstance.data.datasets = [{ label: `Velocidad - ${titulo_etiqueta}`, borderColor: conCarga ? '#fd7e14' : '#007bff', borderWidth: 2, data: [] }];
-        chartIaInstance.data.datasets = [{ label: `Corriente - ${titulo_etiqueta}`, borderColor: conCarga ? '#fd7e14' : '#007bff', borderWidth: 2, data: [] }];
-
-        let index = 0;
-        const totalPoints = results.dataW.length;
-        const chunkSize = 2; // Más pequeño = animación más lenta y detallada
-
-        animacionInterval = setInterval(() => {
-            let endIndex = Math.min(index + chunkSize, totalPoints);
-            
-            chartVaInstance.data.datasets[0].data = results.dataVa.slice(0, endIndex);
-            chartWInstance.data.datasets[0].data = results.dataW.slice(0, endIndex);
-            chartIaInstance.data.datasets[0].data = results.dataIa.slice(0, endIndex);
-
-            chartVaInstance.update('none');
-            chartWInstance.update('none');
-            chartIaInstance.update('none');
-
-            index = endIndex;
-            if (index >= totalPoints) {
-                clearInterval(animacionInterval);
-                document.getElementById('btnGuardar').disabled = false;
-            }
-        }, 40); // 40ms por frame para mayor fluidez y lentitud
-    }
-
     function guardarSimulacion() {
         if (!simulacionActual) return;
         const color = colors[savedSimulations.length % colors.length];
@@ -475,7 +434,7 @@
 
         let index = 0;
         const maxPoints = Math.max(...savedSimulations.map(sim => sim.dataW.length));
-        const chunkSize = 2; // Avance lento y detallado para la comparación
+        const chunkSize = 1; // 1 punto por ciclo para máxima precisión y lentitud
 
         animacionInterval = setInterval(() => {
             let endIndex = Math.min(index + chunkSize, maxPoints);
@@ -494,7 +453,7 @@
             if (index >= maxPoints) {
                 clearInterval(animacionInterval);
             }
-        }, 40);
+        }, 80); // 80 milisegundos por frame para una animación muy pausada y fluida
     }
 
     document.addEventListener("DOMContentLoaded", function() {
