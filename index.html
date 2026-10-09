@@ -87,6 +87,7 @@
                 <div class="grid-inputs">
                     <div class="input-group"><label>Amplitud Tensión V_a (V)</label><input type="number" id="v_a" placeholder="Ej. 24" step="any"></div>
                     <div class="input-group"><label>Par de Carga T_L (N·m)</label><input type="number" id="t_l" placeholder="Ej. 0.3" step="any"></div>
+                    <div class="input-group"><label>Tiempo Carga t_load (s)</label><input type="number" id="t_load" placeholder="Ej. 0" value="0" step="any"></div>
                     <div class="input-group" style="grid-column: span 2;">
                         <label>Tipo de Señal V_a</label>
                         <select id="signal_type" onchange="actualizarInfoOnda()">
@@ -107,7 +108,7 @@
                 <!-- BOTONES -->
                 <div class="action-buttons">
                     <button class="btn btn-calc" onclick="calcularGrafica(false)">Calcular Sin Carga</button>
-                    <button class="btn btn-insert" onclick="calcularGrafica(true)">Aplicar Carga Gradual</button>
+                    <button class="btn btn-insert" onclick="calcularGrafica(true)">Calcular Con Carga</button>
                     <button class="btn btn-save" id="btnGuardar" onclick="guardarSimulacion()" disabled>Guardar</button>
                 </div>
             </div>
@@ -141,7 +142,7 @@
                     <canvas id="chartW"></canvas>
                 </div>
                 <div class="chart-caption">
-                    <strong>Gráfica de Velocidad Angular (ω):</strong> Representa el comportamiento mecánico del eje del motor (aceleración y desaceleración) medido en rad/s.
+                    <strong>Gráfica de Velocidad Angular ($\omega$):</strong> Representa el comportamiento mecánico del eje del motor (aceleración y desaceleración) medido en $\text{rad/s}$.
                 </div>
             </div>
             <div class="chart-container">
@@ -149,7 +150,7 @@
                     <canvas id="chartIa"></canvas>
                 </div>
                 <div class="chart-caption">
-                    <strong>Gráfica de Corriente de Armadura (Ia):</strong> Representa el consumo eléctrico del motor y muestra los picos transitorios medidos en Amperios.
+                    <strong>Gráfica de Corriente de Armadura ($I_a$):</strong> Representa el consumo eléctrico del motor y muestra los picos transitorios medidos en Amperios.
                 </div>
             </div>
         </div>
@@ -246,7 +247,7 @@
         const defaultValues = {
             'r_a': 2.2, 'l_a': 0.45, 'v_f': 15, 'r_f': 12, 
             'j': 0.003, 'b': 0.002, 'k_t': 0.15, 'k_v': 0.15, 
-            'v_a': 24, 't_l': 0.3
+            'v_a': 24, 't_l': 0.3, 't_load': 0
         };
         
         const values = {};
@@ -255,7 +256,7 @@
             const element = document.getElementById(id);
             let val = element.value;
             
-            if (val === '') {
+            if (val === '' || isNaN(val)) {
                 val = defaultValues[id]; 
                 element.value = val; 
             }
@@ -267,13 +268,13 @@
         return values;
     }
 
-    function ejecutarModelo(p, insercionCarga) {
+    function ejecutarModelo(p, conCarga) {
         const If = p.v_f / p.r_f;
         const dt = p.signal_type === 'peru' ? 0.0002 : 0.001; 
         
         let T_sim = 6; 
         if (p.signal_type === 'peru') {
-            T_sim = insercionCarga ? 0.4 : 0.2;
+            T_sim = 0.2;
         }
 
         let ia = 0, w = 0, t = 0;
@@ -295,18 +296,21 @@
                 case 'peru': va_t = p.v_a * Math.abs(Math.sin(2 * Math.PI * 60 * t)); break;
             }
 
-            // CARGA GRADUAL / LENTA: 
-            // Si el botón no está activado, la carga es estrictamente 0.
-            // Si está activado, a partir de t = 2.0s la carga sube suavemente hasta alcanzar T_L en t = 3.5s.
+            // APLICACIÓN DE CARGA SEGÚN EL TIEMPO CONFIGURADO (t_load)
             let current_tl = 0;
-            if (insercionCarga) {
-                if (t < 2.0) {
+            if (conCarga) {
+                let t_start = p.t_load;
+                let trans_duration = p.signal_type === 'peru' ? 0.02 : 1.0; // Duración de la transición suave de entrada de carga
+                
+                if (t < t_start) {
                     current_tl = 0;
-                } else if (t >= 2.0 && t <= 3.5) {
-                    current_tl = p.t_l * ((t - 2.0) / 1.5); // Transición suave y lenta
+                } else if (t >= t_start && t <= t_start + trans_duration) {
+                    current_tl = p.t_l * ((t - t_start) / trans_duration); // Entra de forma gradual y lenta
                 } else {
-                    current_tl = p.t_l; // Carga plena constante
+                    current_tl = p.t_l; // Carga nominal completa
                 }
+            } else {
+                current_tl = 0; // Sin carga absoluta
             }
 
             let dia_dt = (va_t - p.r_a * ia - p.k_v * w * If) / p.l_a;
@@ -328,20 +332,20 @@
         return { dataW, dataIa };
     }
 
-    function calcularGrafica(insercionCarga) {
+    function calcularGrafica(conCarga) {
         if (!chartWInstance) {
             alert("La gráfica aún se está cargando. Intenta nuevamente.");
             return;
         }
 
         const params = obtenerDatos();
-        const results = ejecutarModelo(params, insercionCarga);
+        const results = ejecutarModelo(params, conCarga);
         
         let labelCorto = waveInfoData[params.signal_type].title;
 
         let titulo_etiqueta = `${labelCorto} | Va:${params.v_a}V`;
-        if (insercionCarga) {
-            titulo_etiqueta += ` | Carga Gradual: ${params.t_l}N·m`;
+        if (conCarga) {
+            titulo_etiqueta += ` | Carga: ${params.t_l}N·m (desde t=${params.t_load}s)`;
         } else {
             titulo_etiqueta += ` | Sin Carga (Vacío)`;
         }
@@ -355,7 +359,7 @@
 
         chartWInstance.data.datasets = [{
             label: `Vista Previa: ${simulacionActual.label}`,
-            borderColor: insercionCarga ? '#fd7e14' : '#007bff', 
+            borderColor: conCarga ? '#fd7e14' : '#007bff', 
             borderWidth: 2,
             borderDash: [5, 5],
             data: simulacionActual.dataW
@@ -364,7 +368,7 @@
 
         chartIaInstance.data.datasets = [{
             label: `Vista Previa: ${simulacionActual.label}`,
-            borderColor: insercionCarga ? '#fd7e14' : '#007bff', 
+            borderColor: conCarga ? '#fd7e14' : '#007bff', 
             borderWidth: 2,
             borderDash: [5, 5],
             data: simulacionActual.dataIa
@@ -405,4 +409,89 @@
                 <td>
                     <button class="btn btn-show" onclick="mostrarGraficoIndividual(${sim.id})">Mostrar</button>
                     <button class="btn btn-delete" onclick="eliminarSimulacion(${sim.id})">X</button>
-                
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function eliminarSimulacion(id) {
+        savedSimulations = savedSimulations.filter(s => s.id !== id);
+        actualizarTabla();
+        chartWInstance.data.datasets = [];
+        chartIaInstance.data.datasets = [];
+        chartWInstance.update();
+        chartIaInstance.update();
+    }
+
+    function mostrarGraficoIndividual(id) {
+        const sim = savedSimulations.find(s => s.id === id);
+        if (!sim) return;
+
+        chartWInstance.data.datasets = [{
+            label: `Velocidad - ${sim.label}`,
+            borderColor: sim.color,
+            borderWidth: 2,
+            borderDash: [],
+            data: sim.dataW
+        }];
+        chartWInstance.update();
+
+        chartIaInstance.data.datasets = [{
+            label: `Corriente - ${sim.label}`,
+            borderColor: sim.color,
+            borderWidth: 2,
+            borderDash: [],
+            data: sim.dataIa
+        }];
+        chartIaInstance.update();
+    }
+
+    function compararGraficos() {
+        if (savedSimulations.length === 0) {
+            alert('No hay simulaciones guardadas para comparar.');
+            return;
+        }
+
+        const datasetsW = savedSimulations.map(sim => ({
+            label: sim.label,
+            borderColor: sim.color,
+            borderWidth: 1.5,
+            borderDash: [],
+            data: sim.dataW
+        }));
+
+        const datasetsIa = savedSimulations.map(sim => ({
+            label: sim.label,
+            borderColor: sim.color,
+            borderWidth: 1.5,
+            borderDash: [],
+            data: sim.dataIa
+        }));
+
+        chartWInstance.data.datasets = datasetsW;
+        chartWInstance.update();
+
+        chartIaInstance.data.datasets = datasetsIa;
+        chartIaInstance.update();
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        actualizarInfoOnda(); 
+
+        let intentos = 0;
+        let intervalo = setInterval(() => {
+            if (typeof Chart !== 'undefined') {
+                clearInterval(intervalo);
+                initCharts();
+            }
+            intentos++;
+            if (intentos > 15) { 
+                clearInterval(intervalo);
+            }
+        }, 300);
+    });
+</script>
+
+</body>
+</html>
