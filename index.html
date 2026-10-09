@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Simulador de Motor DC - Respuesta Natural y Forzada</title>
+    <!-- Librería de Gráficas -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .main-container { width: 95%; max-width: 1300px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #2c3e50; margin-top: 0; margin-bottom: 20px;}
+        
+        .layout { display: flex; gap: 20px; flex-wrap: wrap; }
+        .left-panel { flex: 1; min-width: 350px; display: flex; flex-direction: column; gap: 15px; }
+        .right-panel { flex: 2; min-width: 500px; display: flex; flex-direction: column; gap: 15px; }
+
+        .section-box { background: #e9ecef; padding: 15px; border-radius: 8px; border: 1px solid #ced4da; }
+        .section-title { font-size: 14px; font-weight: bold; color: #495057; margin-bottom: 10px; border-bottom: 2px solid #adb5bd; padding-bottom: 5px; }
+        
+        .grid-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+        .input-group { display: flex; flex-direction: column; }
+        .input-group label { font-size: 11px; font-weight: bold; color: #333; margin-bottom: 3px; }
+        .input-group input, .input-group select { padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; }
+        
+        /* Panel Dinámico de Onda */
+        .wave-info-box { display: flex; align-items: center; gap: 15px; background: #fff; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 10px; min-height: 50px; }
+        .wave-icon { width: 50px; height: 30px; flex-shrink: 0; }
+        .wave-text { font-size: 11px; color: #444; line-height: 1.4; }
+        .wave-text strong { color: #007bff; display: block; margin-bottom: 2px; }
+
+        .btn { border: none; padding: 8px 10px; font-size: 12px; font-weight: bold; border-radius: 5px; cursor: pointer; transition: background 0.3s; color: white; flex: 1; text-align: center; }
+        .btn-calc { background: #17a2b8; }
+        .btn-calc:hover { background: #138496; }
+        .btn-insert { background: #fd7e14; }
+        .btn-insert:hover { background: #e26b0b; }
+        .btn-save { background: #28a745; }
+        .btn-save:hover { background: #218838; }
+        .btn-save:disabled { background: #6c757d; cursor: not-allowed; opacity: 0.6; }
+        
+        .action-buttons { display: flex; gap: 8px; margin-top: 10px; }
+
+        .btn-compare { background: #6f42c1; width: 100%; padding: 10px; margin-top: 10px; font-size: 13px;}
+        .btn-compare:hover { background: #59339d; }
+        .btn-show { background: #007bff; font-size: 11px; padding: 4px 8px; }
+        .btn-show:hover { background: #0056b3; }
+        .btn-delete { background: #dc3545; font-size: 11px; padding: 4px 8px; }
+        .btn-delete:hover { background: #c82333; }
+
+        .table-wrapper { max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px; margin-top: 10px; background: white;}
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; }
+        th, td { padding: 8px; border-bottom: 1px solid #ddd; }
+        th { background-color: #343a40; color: white; position: sticky; top: 0; }
+        
+        /* Contenedor de gráficas y sus descripciones */
+        .chart-container { display: flex; flex-direction: column; height: 350px; width: 100%; background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 10px; box-sizing: border-box; }
+        .canvas-wrapper { flex: 1; position: relative; min-height: 0; }
+        .chart-caption { text-align: center; font-size: 11.5px; color: #555; margin-top: 10px; padding-top: 8px; border-top: 1px dashed #ddd; }
+        .chart-caption strong { color: #2c3e50; }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <h2>Simulador Dinámico: Motor DC</h2>
+    
+    <div class="layout">
+        <!-- Panel Izquierdo: Configuración y Tabla -->
+        <div class="left-panel">
+            <!-- 1. Datos Iniciales -->
+            <div class="section-box">
+                <div class="section-title">1. Datos Iniciales del Motor</div>
+                <div class="grid-inputs">
+                    <div class="input-group"><label>Resistencia Inducido R_a (Ω)</label><input type="number" id="r_a" placeholder="Ej. 2.2" step="any"></div>
+                    <div class="input-group"><label>Inductancia L_a (H)</label><input type="number" id="l_a" placeholder="Ej. 0.45" step="any"></div>
+                    <div class="input-group"><label>Tensión Campo V_f (V)</label><input type="number" id="v_f" placeholder="Ej. 15" step="any"></div>
+                    <div class="input-group"><label>Resistencia Campo R_f (Ω)</label><input type="number" id="r_f" placeholder="Ej. 12" step="any"></div>
+                    <div class="input-group"><label>Inercia J (kg·m²)</label><input type="number" id="j" placeholder="Ej. 0.003" step="any"></div>
+                    <div class="input-group"><label>Fricción B (N·m·s)</label><input type="number" id="b" placeholder="Ej. 0.002" step="any"></div>
+                    <div class="input-group"><label>Const. Torque K_t</label><input type="number" id="k_t" placeholder="Ej. 0.15" step="any"></div>
+                    <div class="input-group"><label>Const. Voltaje K_v</label><input type="number" id="k_v" placeholder="Ej. 0.15" step="any"></div>
+                </div>
+            </div>
+
+            <!-- 2. Datos de Simulación -->
+            <div class="section-box">
+                <div class="section-title">2. Datos de Simulación</div>
+                <div class="grid-inputs">
+                    <div class="input-group"><label>Amplitud Tensión V_a (V)</label><input type="number" id="v_a" placeholder="Ej. 24" step="any"></div>
+                    <div class="input-group"><label>Par de Carga T_L (N·m)</label><input type="number" id="t_l" placeholder="Ej. 0.3" step="any"></div>
+                    <div class="input-group" style="grid-column: span 2;">
+                        <label>Tipo de Señal V_a</label>
+                        <select id="signal_type" onchange="actualizarInfoOnda()">
+                            <option value="step">Escalón Unitario (Respuesta transitoria extrema)</option>
+                            <option value="square">Onda Cuadrada (Simulación PWM a baja frecuencia)</option>
+                            <option value="ramp">Rampa (Arranque suave sin pico de corriente)</option>
+                            <option value="triangle">Onda Triangular (Barrido de aceleración y frenado)</option>
+                            <option value="peru">Onda Rectificada (Efecto de rizado en Red Perú 60Hz)</option>
+                            <option value="constant">Régimen Permanente (Punto de operación final estacionario)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="wave-info-box" id="wave-info-box">
+                    <!-- Se llena con JS -->
+                </div>
+
+                <!-- BOTONES MEJORADOS -->
+                <div class="action-buttons">
+                    <button class="btn btn-calc" onclick="calcularGrafica(false)">Calcular Normal</button>
+                    <button class="btn btn-insert" onclick="calcularGrafica(true)">Insertar Carga t=3s</button>
+                    <button class="btn btn-save" id="btnGuardar" onclick="guardarSimulacion()" disabled>Guardar</button>
+                </div>
+            </div>
+
+            <!-- 3. Tabla de Resultados -->
+            <div class="section-box">
+                <div class="section-title">3. Simulaciones Guardadas</div>
+                <div class="table-wrapper">
+                    <table id="resultsTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Onda</th>
+                                <th>V_a</th>
+                                <th>T_L</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <button class="btn btn-compare" onclick="compararGraficos()">Comparar Gráficos Superpuestos</button>
+            </div>
+        </div>
+
+        <!-- Panel Derecho: Gráficas -->
+        <div class="right-panel">
+            <div class="chart-container">
+                <div class="canvas-wrapper">
+                    <canvas id="chartW"></canvas>
+                </div>
+                <div class="chart-caption">
+                    <strong>Gráfica de Velocidad Angular (ω):</strong> Representa el comportamiento mecánico del eje del motor (aceleración y desaceleración) medido en rad/s.
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="canvas-wrapper">
+                    <canvas id="chartIa"></canvas>
+                </div>
+                <div class="chart-caption">
+                    <strong>Gráfica de Corriente de Armadura (Ia):</strong> Representa el consumo eléctrico del motor y muestra los picos transitorios medidos en Amperios.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let chartWInstance = null;
+    let chartIaInstance = null;
+    let savedSimulations = [];
+    let simIdCounter = 1;
+    let simulacionActual = null;
+
+    const colors = ['#007bff', '#dc3545', '#28a745', '#ffc107', '#6f42c1', '#fd7e14', '#20c997', '#e83e8c'];
+
+    const waveInfoData = {
+        'step': {
+            svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="0,18 10,18 10,2 40,2" fill="none" stroke="#007bff" stroke-width="2"/></svg>',
+            title: 'Escalón Unitario',
+            desc: 'Aplica la tensión máxima instantáneamente. Analiza la respuesta transitoria extrema y el pico máximo destructivo de corriente en el arranque directo.'
+        },
+        'square': {
+            svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="0,18 5,18 5,2 15,2 15,18 25,18 25,2 35,2 35,18 40,18" fill="none" stroke="#007bff" stroke-width="2"/></svg>',
+            title: 'Onda Cuadrada',
+            desc: 'Alterna bruscamente entre tensión máxima y cero. Simula modulación PWM a muy baja frecuencia para ensayos continuos de encendido y apagado.'
+        },
+        'ramp': {
+            svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="0,18 5,18 25,2 40,2" fill="none" stroke="#007bff" stroke-width="2"/></svg>',
+            title: 'Rampa',
+            desc: 'Aumenta la tensión progresivamente. Emula un arrancador suave (soft-start) para evitar el estrés mecánico y suprimir el pico de corriente inicial.'
+        },
+        'triangle': {
+            svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="0,18 10,2 20,18 30,2 40,18" fill="none" stroke="#007bff" stroke-width="2"/></svg>',
+            title: 'Onda Triangular',
+            desc: 'Sube y baja linealmente. Utilizada para evaluar la histéresis del sistema electromecánico y realizar barridos de aceleración y frenado dinámico.'
+        },
+        'peru': {
+            svg: '<svg viewBox="0 0 40 20" class="wave-icon"><path d="M 0 18 Q 5 0 10 18 Q 15 0 20 18 Q 25 0 30 18 Q 35 0 40 18" fill="none" stroke="#007bff" stroke-width="2"/></svg>',
+            title: 'Rectificada Completa (Red Perú 60Hz)',
+            desc: 'Simula la red peruana pasada por puente rectificador. Permite observar el "rizado" a 120 Hz en la corriente de armadura.'
+        },
+        'constant': {
+            svg: '<svg viewBox="0 0 40 20" class="wave-icon"><line x1="0" y1="10" x2="40" y2="10" stroke="#007bff" stroke-width="2"/></svg>',
+            title: 'Régimen Permanente',
+            desc: 'Asume que el transitorio ya finalizó. Sirve para evaluar matemáticamente el punto de operación final estacionario del motor.'
+        }
+    };
+
+    function actualizarInfoOnda() {
+        const type = document.getElementById('signal_type').value;
+        const info = waveInfoData[type];
+        const box = document.getElementById('wave-info-box');
+        box.innerHTML = `
+            ${info.svg}
+            <div class="wave-text">
+                <strong>${info.title}</strong>
+                ${info.desc}
+            </div>
+        `;
+    }
+
+    function initCharts() {
+        const ctxW = document.getElementById('chartW').getContext('2d');
+        const ctxIa = document.getElementById('chartIa').getContext('2d');
+
+        const commonOptions = { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            animation: { duration: 400 },
+            elements: { point: { radius: 0, hitRadius: 5 } },
+            interaction: { mode: 'index', intersect: false }
+        };
+
+        chartWInstance = new Chart(ctxW, {
+            type: 'line',
+            data: { datasets: [] },
+            options: Object.assign({}, commonOptions, { scales: { x: { type: 'linear', title: { display: true, text: 'Tiempo (s)' } }, y: { title: { display: true, text: 'Velocidad ω (rad/s)' } } } })
+        });
+
+        chartIaInstance = new Chart(ctxIa, {
+            type: 'line',
+            data: { datasets: [] },
+            options: Object.assign({}, commonOptions, { scales: { x: { type: 'linear', title: { display: true, text: 'Tiempo (s)' } }, y: { title: { display: true, text: 'Corriente I_a (A)' } } } })
+        });
+    }
+
+    // Autocompletado robusto a prueba de fallos
+    function obtenerDatos() {
+        const defaultValues = {
+            'r_a': 2.2, 'l_a': 0.45, 'v_f': 15, 'r_f': 12, 
+            'j': 0.003, 'b': 0.002, 'k_t': 0.15, 'k_v': 0.15, 
+            'v_a': 24, 't_l': 0.3
+        };
+        
+        const values = {};
+        
+        for (let id in defaultValues) {
+            const element = document.getElementById(id);
+            let val = element.value;
+            
+            if (val === '') {
+                val = defaultValues[id]; // Usa el valor matemático exacto si está vacío
+                element.value = val; // Se lo muestra al usuario
+            }
+            
+            values[id] = parseFloat(val);
+        }
+        
+        values.signal_type = document.getElementById('signal_type').value;
+        values.signal_name = waveInfoData[values.signal_type].title;
+        return values;
+    }
+
+    function ejecutarModelo(p, insercionCarga) {
+        const If = p.v_f / p.r_f;
+        const dt = p.signal_type === 'peru' ? 0.0002 : 0.001; 
+        
+        // Si hay inserción de carga, aumentamos el tiempo de simulación para ver el efecto antes y después
+        let T_sim = (p.signal_type === 'constant' || p.signal_type === 'step') ? 3 : (p.signal_type === 'peru' ? 0.2 : 6); 
+        if (insercionCarga && p.signal_type !== 'constant' && p.signal_type !== 'peru') {
+            T_sim = 6; // Damos 6 segundos (3 de vacío, 3 con carga)
+        } else if (insercionCarga && p.signal_type === 'peru') {
+            T_sim = 0.4; // Damos más tiempo para ver la red de perú
+        }
+
+        let ia = 0, w = 0, t = 0;
+        
+        const dataW = [];
+        const dataIa = [];
+
+        if (p.signal_type === 'constant' && !insercionCarga) {
+            const denom = (p.r_a * p.b) + (p.k_t * p.k_v * If * If);
+            w = (p.v_a * p.k_t * If - p.r_a * p.t_l) / denom;
+            ia = (p.v_a * p.b + p.k_v * If * p.t_l) / denom;
+            
+            dataW.push({x: 0, y: w}, {x: T_sim, y: w});
+            dataIa.push({x: 0, y: ia}, {x: T_sim, y: ia});
+        } else {
+            const saveStep = p.signal_type === 'peru' ? (0.001 / dt) : (0.01 / dt);
+
+            for (let i = 0; i <= T_sim / dt; i++) {
+                t = i * dt;
+                let va_t = 0;
+                
+                // Si la señal era "constant" pero es inserción de carga, la forzamos a funcionar como escalón
+                let tipo_onda_actual = (p.signal_type === 'constant') ? 'step' : p.signal_type;
+
+                switch(tipo_onda_actual) {
+                    case 'step': va_t = p.v_a; break;
+                    case 'square': va_t = (t % 2.0 < 1.0) ? p.v_a : 0; break;
+                    case 'ramp': va_t = Math.min(p.v_a, (p.v_a / 1.5) * t); break; 
+                    case 'triangle': va_t = p.v_a * (1 - Math.abs((t % 2.0) - 1.0)); break;
+                    case 'peru': va_t = p.v_a * Math.abs(Math.sin(2 * Math.PI * 60 * t)); break;
+                }
+
+                // APLICACIÓN DE CARGA DINÁMICA
+                let current_tl = p.t_l;
+                if (insercionCarga) {
+                    // Si el tiempo es menor a la mitad de la simulación, no hay carga. Luego cae de golpe.
+                    let mitad_tiempo = T_sim / 2;
+                    current_tl = (t < mitad_tiempo) ? 0 : p.t_l;
+                }
+
+                let dia_dt = (va_t - p.r_a * ia - p.k_v * w * If) / p.l_a;
+                let dw_dt = (p.k_t * If * ia - p.b * w - current_tl) / p.j;
+
+                if (w < 0 && dw_dt < 0 && va_t === 0) {
+                    w = 0;
+                    dw_dt = 0;
+                }
+
+                ia += dia_dt * dt;
+                w += dw_dt * dt;
+
+                if (i % Math.round(saveStep) === 0) { 
+                    dataW.push({ x: parseFloat(t.toFixed(4)), y: w });
+                    dataIa.push({ x: parseFloat(t.toFixed(4)), y: ia });
+                }
+            }
+        }
+        return { dataW, dataIa };
+    }
+
+    function calcularGrafica(insercionCarga) {
+        if (!chartWInstance) {
+            alert("⚠️ ALERTA: Tu celular está bloqueando la librería gráfica porque abriste el archivo desde el gestor (content://). Ábrelo desde el navegador Chrome, o transfiérelo a una PC.");
+            return;
+        }
+
+        const params = obtenerDatos();
+        const results = ejecutarModelo(params, insercionCarga);
+        
+        let labelCorto = '';
+        switch(params.signal_type){
+            case 'peru': labelCorto = 'Red Perú'; break;
+            case 'triangle': labelCorto = 'Triangular'; break;
+            case 'ramp': labelCorto = 'Rampa'; break;
+            case 'square': labelCorto = 'Cuadrada'; break;
+            case 'step': labelCorto = 'Escalón'; break;
+            case 'constant': labelCorto = 'Régimen Perm.'; break;
+        }
+
+        let titulo_etiqueta = `${labelCorto} | Va:${params.v_a}V`;
+        if (insercionCarga) {
+            titulo_etiqueta += ` | Inserción TL: ${params.t_l}N·m`;
+        } else {
+            titulo_etiqueta += ` | TL:${params.t_l}N·m`;
+        }
+
+        simulacionActual = {
+            params: params,
+            dataW: results.dataW,
+            dataIa: results.dataIa,
+            label: titulo_etiqueta
+        };
+
+        chartWInstance.data.datasets = [{
+            label: `Vista Previa: ${simulacionActual.label}`,
+            borderColor: insercionCarga ? '#fd7e14' : '#495057', // Naranja si es inserción
+            borderWidth: 2,
+            borderDash: [5, 5],
+            data: simulacionActual.dataW
+        }];
+        chartWInstance.update();
+
+        chartIaInstance.data.datasets = [{
+            label: `Vista Previa: ${simulacionActual.label}`,
+            borderColor: insercionCarga ? '#fd7e14' : '#495057', // Naranja si es inserción
+            borderWidth: 2,
+            borderDash: [5, 5],
+            data: simulacionActual.dataIa
+        }];
+        chartIaInstance.update();
+
+        document.getElementById('btnGuardar').disabled = false;
+    }
+
+    function guardarSimulacion() {
+        if (!simulacionActual) return;
+
+        const color = colors[savedSimulations.length % colors.length];
+        
+        const sim = {
+            id: 
