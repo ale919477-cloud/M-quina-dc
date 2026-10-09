@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Simulador de Motor DC - Animación Progresiva</title>
+    <title>Simulador de Motor DC - Animación Progresiva y Comparativa</title>
     <!-- Librería de Gráficas -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -133,7 +133,7 @@
                         </tbody>
                     </table>
                 </div>
-                <button class="btn btn-compare" onclick="compararGraficos()">Comparar Gráficos Superpuestos</button>
+                <button class="btn btn-compare" onclick="compararGraficosAnimados()">▶ Comparar Gráficos Animados</button>
             </div>
         </div>
 
@@ -236,7 +236,7 @@
         const commonOptions = { 
             responsive: true, 
             maintainAspectRatio: false,
-            animation: false, // Desactivar animación nativa de chart.js para control manual fluido
+            animation: false, 
             elements: { point: { radius: 0, hitRadius: 5 } },
             interaction: { mode: 'index', intersect: false }
         };
@@ -376,7 +376,7 @@
 
         let index = 0;
         const totalPoints = results.dataW.length;
-        const chunkSize = Math.max(1, Math.floor(totalPoints / 80)); // Velocidad de animación fluida
+        const chunkSize = 2; // Más pequeño = animación más lenta y detallada
 
         animacionInterval = setInterval(() => {
             let endIndex = Math.min(index + chunkSize, totalPoints);
@@ -394,7 +394,7 @@
                 clearInterval(animacionInterval);
                 document.getElementById('btnGuardar').disabled = false;
             }
-        }, 30);
+        }, 40); // 40ms por frame para mayor fluidez y lentitud
     }
 
     function guardarSimulacion() {
@@ -461,21 +461,40 @@
         chartIaInstance.update();
     }
 
-    function compararGraficos() {
+    function compararGraficosAnimados() {
         if (animacionInterval) clearInterval(animacionInterval);
         if (savedSimulations.length === 0) {
             alert('No hay simulaciones guardadas para comparar.');
             return;
         }
 
-        chartVaInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, borderWidth: 1.5, data: sim.dataVa }));
-        chartVaInstance.update();
+        // Preparar datasets vacíos inicialmente para la animación comparativa
+        chartVaInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, borderWidth: 1.5, data: [] }));
+        chartWInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, borderWidth: 1.5, data: [] }));
+        chartIaInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, borderWidth: 1.5, data: [] }));
 
-        chartWInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, borderWidth: 1.5, data: sim.dataW }));
-        chartWInstance.update();
+        let index = 0;
+        const maxPoints = Math.max(...savedSimulations.map(sim => sim.dataW.length));
+        const chunkSize = 2; // Avance lento y detallado para la comparación
 
-        chartIaInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, borderWidth: 1.5, data: sim.dataIa }));
-        chartIaInstance.update();
+        animacionInterval = setInterval(() => {
+            let endIndex = Math.min(index + chunkSize, maxPoints);
+
+            savedSimulations.forEach((sim, idx) => {
+                chartVaInstance.data.datasets[idx].data = sim.dataVa.slice(0, endIndex);
+                chartWInstance.data.datasets[idx].data = sim.dataW.slice(0, endIndex);
+                chartIaInstance.data.datasets[idx].data = sim.dataIa.slice(0, endIndex);
+            });
+
+            chartVaInstance.update('none');
+            chartWInstance.update('none');
+            chartIaInstance.update('none');
+
+            index = endIndex;
+            if (index >= maxPoints) {
+                clearInterval(animacionInterval);
+            }
+        }, 40);
     }
 
     document.addEventListener("DOMContentLoaded", function() {
