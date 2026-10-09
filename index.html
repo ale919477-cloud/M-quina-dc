@@ -101,13 +101,13 @@
                 </div>
 
                 <div class="wave-info-box" id="wave-info-box">
-                    <!-- Se llena con JS (Gráfica SVG + Texto) -->
+                    <!-- Se llena con JS -->
                 </div>
 
                 <!-- BOTONES -->
                 <div class="action-buttons">
                     <button class="btn btn-calc" onclick="calcularGrafica(false)">Calcular Sin Carga</button>
-                    <button class="btn btn-insert" onclick="calcularGrafica(true)">Insertar Carga t=3s</button>
+                    <button class="btn btn-insert" onclick="calcularGrafica(true)">Aplicar Carga Gradual</button>
                     <button class="btn btn-save" id="btnGuardar" onclick="guardarSimulacion()" disabled>Guardar</button>
                 </div>
             </div>
@@ -224,7 +224,7 @@
         const commonOptions = { 
             responsive: true, 
             maintainAspectRatio: false,
-            animation: { duration: 1200 }, 
+            animation: { duration: 1000 }, 
             elements: { point: { radius: 0, hitRadius: 5 } },
             interaction: { mode: 'index', intersect: false }
         };
@@ -295,10 +295,18 @@
                 case 'peru': va_t = p.v_a * Math.abs(Math.sin(2 * Math.PI * 60 * t)); break;
             }
 
-            // CARGA ESTRICTA: 0 si no se inserta, o entra en t=3s si se pulsa el botón
+            // CARGA GRADUAL / LENTA: 
+            // Si el botón no está activado, la carga es estrictamente 0.
+            // Si está activado, a partir de t = 2.0s la carga sube suavemente hasta alcanzar T_L en t = 3.5s.
             let current_tl = 0;
             if (insercionCarga) {
-                current_tl = (t < 3.0) ? 0 : p.t_l;
+                if (t < 2.0) {
+                    current_tl = 0;
+                } else if (t >= 2.0 && t <= 3.5) {
+                    current_tl = p.t_l * ((t - 2.0) / 1.5); // Transición suave y lenta
+                } else {
+                    current_tl = p.t_l; // Carga plena constante
+                }
             }
 
             let dia_dt = (va_t - p.r_a * ia - p.k_v * w * If) / p.l_a;
@@ -333,7 +341,7 @@
 
         let titulo_etiqueta = `${labelCorto} | Va:${params.v_a}V`;
         if (insercionCarga) {
-            titulo_etiqueta += ` | Carga Inyectada: ${params.t_l}N·m en t=3s`;
+            titulo_etiqueta += ` | Carga Gradual: ${params.t_l}N·m`;
         } else {
             titulo_etiqueta += ` | Sin Carga (Vacío)`;
         }
@@ -397,89 +405,4 @@
                 <td>
                     <button class="btn btn-show" onclick="mostrarGraficoIndividual(${sim.id})">Mostrar</button>
                     <button class="btn btn-delete" onclick="eliminarSimulacion(${sim.id})">X</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-
-    function eliminarSimulacion(id) {
-        savedSimulations = savedSimulations.filter(s => s.id !== id);
-        actualizarTabla();
-        chartWInstance.data.datasets = [];
-        chartIaInstance.data.datasets = [];
-        chartWInstance.update();
-        chartIaInstance.update();
-    }
-
-    function mostrarGraficoIndividual(id) {
-        const sim = savedSimulations.find(s => s.id === id);
-        if (!sim) return;
-
-        chartWInstance.data.datasets = [{
-            label: `Velocidad - ${sim.label}`,
-            borderColor: sim.color,
-            borderWidth: 2,
-            borderDash: [],
-            data: sim.dataW
-        }];
-        chartWInstance.update();
-
-        chartIaInstance.data.datasets = [{
-            label: `Corriente - ${sim.label}`,
-            borderColor: sim.color,
-            borderWidth: 2,
-            borderDash: [],
-            data: sim.dataIa
-        }];
-        chartIaInstance.update();
-    }
-
-    function compararGraficos() {
-        if (savedSimulations.length === 0) {
-            alert('No hay simulaciones guardadas para comparar.');
-            return;
-        }
-
-        const datasetsW = savedSimulations.map(sim => ({
-            label: sim.label,
-            borderColor: sim.color,
-            borderWidth: 1.5,
-            borderDash: [],
-            data: sim.dataW
-        }));
-
-        const datasetsIa = savedSimulations.map(sim => ({
-            label: sim.label,
-            borderColor: sim.color,
-            borderWidth: 1.5,
-            borderDash: [],
-            data: sim.dataIa
-        }));
-
-        chartWInstance.data.datasets = datasetsW;
-        chartWInstance.update();
-
-        chartIaInstance.data.datasets = datasetsIa;
-        chartIaInstance.update();
-    }
-
-    document.addEventListener("DOMContentLoaded", function() {
-        actualizarInfoOnda(); 
-
-        let intentos = 0;
-        let intervalo = setInterval(() => {
-            if (typeof Chart !== 'undefined') {
-                clearInterval(intervalo);
-                initCharts();
-            }
-            intentos++;
-            if (intentos > 15) { 
-                clearInterval(intervalo);
-            }
-        }, 300);
-    });
-</script>
-
-</body>
-</html>
+                
