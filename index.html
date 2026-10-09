@@ -96,7 +96,6 @@
                             <option value="ramp">Rampa</option>
                             <option value="triangle">Onda Triangular</option>
                             <option value="peru">Onda Rectificada</option>
-                            <option value="constant">Régimen Permanente</option>
                         </select>
                     </div>
                 </div>
@@ -203,11 +202,6 @@
             svg: '<svg viewBox="0 0 40 20" class="wave-icon"><path d="M 2 18 Q 7 2 12 18 Q 17 2 22 18 Q 27 2 32 18 Q 36 2 38 18" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>',
             title: 'Rectificada Completa (Red Perú 60Hz)',
             desc: 'Simula la red peruana pasada por puente rectificador. Permite observar el "rizado" a 120 Hz en la corriente de armadura.'
-        },
-        'constant': {
-            svg: '<svg viewBox="0 0 40 20" class="wave-icon"><line x1="2" y1="10" x2="38" y2="10" stroke="#007bff" stroke-width="2.5"/></svg>',
-            title: 'Régimen Permanente',
-            desc: 'Asume que el transitorio ya finalizó. Sirve para evaluar matemáticamente el punto de operación final estacionario del motor.'
         }
     };
 
@@ -305,10 +299,8 @@
         for (let i = 0; i <= T_sim / dt; i++) {
             t = i * dt;
             let va_t = 0;
-            
-            let tipo_onda_actual = (p.signal_type === 'constant') ? 'step' : p.signal_type;
 
-            switch(tipo_onda_actual) {
+            switch(p.signal_type) {
                 case 'step': va_t = p.v_a; break;
                 case 'square': va_t = (t % 2.0 < 1.0) ? p.v_a : 0; break;
                 case 'ramp': va_t = Math.min(p.v_a, (p.v_a / 1.5) * t); break; 
@@ -379,7 +371,7 @@
         };
 
         chartVaInstance.data.datasets = [{
-            label: `Voltaje Aplicado: ${simulacionActual.label}`,
+            label: `Voltaje - ${simulacionActual.label}`,
             borderColor: '#28a745', 
             borderWidth: 2,
             borderDash: [],
@@ -388,7 +380,7 @@
         chartVaInstance.update();
 
         chartWInstance.data.datasets = [{
-            label: `Velocidad: ${simulacionActual.label}`,
+            label: `Velocidad - ${simulacionActual.label}`,
             borderColor: conCarga ? '#fd7e14' : '#007bff', 
             borderWidth: 2,
             borderDash: [],
@@ -397,7 +389,7 @@
         chartWInstance.update();
 
         chartIaInstance.data.datasets = [{
-            label: `Corriente: ${simulacionActual.label}`,
+            label: `Corriente - ${simulacionActual.label}`,
             borderColor: conCarga ? '#fd7e14' : '#007bff', 
             borderWidth: 2,
             borderDash: [],
@@ -424,127 +416,4 @@
         actualizarTabla();
         simulacionActual = null;
         document.getElementById('btnGuardar').disabled = true;
-        mostrarGraficoIndividual(sim.id); 
-    }
-
-    function actualizarTabla() {
-        const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = '';
-        savedSimulations.forEach(sim => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${sim.id}</td>
-                <td title="${sim.label}">${sim.params.signal_name}</td>
-                <td>${sim.params.v_a}</td>
-                <td>${sim.params.t_l}</td>
-                <td>
-                    <button class="btn btn-show" onclick="mostrarGraficoIndividual(${sim.id})">Mostrar</button>
-                    <button class="btn btn-delete" onclick="eliminarSimulacion(${sim.id})">X</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-
-    function eliminarSimulacion(id) {
-        savedSimulations = savedSimulations.filter(s => s.id !== id);
-        actualizarTabla();
-        chartVaInstance.data.datasets = [];
-        chartWInstance.data.datasets = [];
-        chartIaInstance.data.datasets = [];
-        chartVaInstance.update();
-        chartWInstance.update();
-        chartIaInstance.update();
-    }
-
-    function mostrarGraficoIndividual(id) {
-        const sim = savedSimulations.find(s => s.id === id);
-        if (!sim) return;
-
-        chartVaInstance.data.datasets = [{
-            label: `Voltaje - ${sim.label}`,
-            borderColor: sim.color,
-            borderWidth: 2,
-            borderDash: [],
-            data: sim.dataVa
-        }];
-        chartVaInstance.update();
-
-        chartWInstance.data.datasets = [{
-            label: `Velocidad - ${sim.label}`,
-            borderColor: sim.color,
-            borderWidth: 2,
-            borderDash: [],
-            data: sim.dataW
-        }];
-        chartWInstance.update();
-
-        chartIaInstance.data.datasets = [{
-            label: `Corriente - ${sim.label}`,
-            borderColor: sim.color,
-            borderWidth: 2,
-            borderDash: [],
-            data: sim.dataIa
-        }];
-        chartIaInstance.update();
-    }
-
-    function compararGraficos() {
-        if (savedSimulations.length === 0) {
-            alert('No hay simulaciones guardadas para comparar.');
-            return;
-        }
-
-        const datasetsVa = savedSimulations.map(sim => ({
-            label: sim.label,
-            borderColor: sim.color,
-            borderWidth: 1.5,
-            borderDash: [],
-            data: sim.dataVa
-        }));
-
-        const datasetsW = savedSimulations.map(sim => ({
-            label: sim.label,
-            borderColor: sim.color,
-            borderWidth: 1.5,
-            borderDash: [],
-            data: sim.dataW
-        }));
-
-        const datasetsIa = savedSimulations.map(sim => ({
-            label: sim.label,
-            borderColor: sim.color,
-            borderWidth: 1.5,
-            borderDash: [],
-            data: sim.dataIa
-        }));
-
-        chartVaInstance.data.datasets = datasetsVa;
-        chartVaInstance.update();
-
-        chartWInstance.data.datasets = datasetsW;
-        chartWInstance.update();
-
-        chartIaInstance.data.datasets = datasetsIa;
-        chartIaInstance.update();
-    }
-
-    document.addEventListener("DOMContentLoaded", function() {
-        actualizarInfoOnda(); 
-
-        let intentos = 0;
-        let intervalo = setInterval(() => {
-            if (typeof Chart !== 'undefined') {
-                clearInterval(intervalo);
-                initCharts();
-            }
-            intentos++;
-            if (intentos > 15) { 
-                clearInterval(intervalo);
-            }
-        }, 300);
-    });
-</script>
-
-</body>
-</html>
+        mostrarGraf
