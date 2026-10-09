@@ -200,6 +200,7 @@
 
     function actualizarInfoOnda() {
         const type = document.getElementById('signal_type').value;
+        if(!waveInfoData[type]) return;
         const info = waveInfoData[type];
         const box = document.getElementById('wave-info-box');
         box.innerHTML = `
@@ -212,6 +213,8 @@
     }
 
     function initCharts() {
+        if (typeof Chart === 'undefined') return;
+        
         const ctxW = document.getElementById('chartW').getContext('2d');
         const ctxIa = document.getElementById('chartIa').getContext('2d');
 
@@ -236,7 +239,6 @@
         });
     }
 
-    // Autocompletado robusto a prueba de fallos
     function obtenerDatos() {
         const defaultValues = {
             'r_a': 2.2, 'l_a': 0.45, 'v_f': 15, 'r_f': 12, 
@@ -251,10 +253,9 @@
             let val = element.value;
             
             if (val === '') {
-                val = defaultValues[id]; // Usa el valor matemático exacto si está vacío
-                element.value = val; // Se lo muestra al usuario
+                val = defaultValues[id]; 
+                element.value = val; 
             }
-            
             values[id] = parseFloat(val);
         }
         
@@ -267,12 +268,11 @@
         const If = p.v_f / p.r_f;
         const dt = p.signal_type === 'peru' ? 0.0002 : 0.001; 
         
-        // Si hay inserción de carga, aumentamos el tiempo de simulación para ver el efecto antes y después
         let T_sim = (p.signal_type === 'constant' || p.signal_type === 'step') ? 3 : (p.signal_type === 'peru' ? 0.2 : 6); 
         if (insercionCarga && p.signal_type !== 'constant' && p.signal_type !== 'peru') {
-            T_sim = 6; // Damos 6 segundos (3 de vacío, 3 con carga)
+            T_sim = 6; 
         } else if (insercionCarga && p.signal_type === 'peru') {
-            T_sim = 0.4; // Damos más tiempo para ver la red de perú
+            T_sim = 0.4; 
         }
 
         let ia = 0, w = 0, t = 0;
@@ -294,7 +294,6 @@
                 t = i * dt;
                 let va_t = 0;
                 
-                // Si la señal era "constant" pero es inserción de carga, la forzamos a funcionar como escalón
                 let tipo_onda_actual = (p.signal_type === 'constant') ? 'step' : p.signal_type;
 
                 switch(tipo_onda_actual) {
@@ -305,10 +304,8 @@
                     case 'peru': va_t = p.v_a * Math.abs(Math.sin(2 * Math.PI * 60 * t)); break;
                 }
 
-                // APLICACIÓN DE CARGA DINÁMICA
                 let current_tl = p.t_l;
                 if (insercionCarga) {
-                    // Si el tiempo es menor a la mitad de la simulación, no hay carga. Luego cae de golpe.
                     let mitad_tiempo = T_sim / 2;
                     current_tl = (t < mitad_tiempo) ? 0 : p.t_l;
                 }
@@ -335,7 +332,7 @@
 
     function calcularGrafica(insercionCarga) {
         if (!chartWInstance) {
-            alert("⚠️ ALERTA: Tu celular está bloqueando la librería gráfica porque abriste el archivo desde el gestor (content://). Ábrelo desde el navegador Chrome, o transfiérelo a una PC.");
+            alert("La gráfica aún se está cargando o hubo un error de red. Intenta nuevamente en unos segundos.");
             return;
         }
 
@@ -368,7 +365,7 @@
 
         chartWInstance.data.datasets = [{
             label: `Vista Previa: ${simulacionActual.label}`,
-            borderColor: insercionCarga ? '#fd7e14' : '#495057', // Naranja si es inserción
+            borderColor: insercionCarga ? '#fd7e14' : '#495057', 
             borderWidth: 2,
             borderDash: [5, 5],
             data: simulacionActual.dataW
@@ -377,7 +374,7 @@
 
         chartIaInstance.data.datasets = [{
             label: `Vista Previa: ${simulacionActual.label}`,
-            borderColor: insercionCarga ? '#fd7e14' : '#495057', // Naranja si es inserción
+            borderColor: insercionCarga ? '#fd7e14' : '#495057', 
             borderWidth: 2,
             borderDash: [5, 5],
             data: simulacionActual.dataIa
@@ -389,8 +386,24 @@
 
     function guardarSimulacion() {
         if (!simulacionActual) return;
-
         const color = colors[savedSimulations.length % colors.length];
-        
         const sim = {
-            id: 
+            id: simIdCounter++,
+            params: simulacionActual.params,
+            dataW: simulacionActual.dataW,
+            dataIa: simulacionActual.dataIa,
+            color: color,
+            label: simulacionActual.label
+        };
+        savedSimulations.push(sim);
+        actualizarTabla();
+        simulacionActual = null;
+        document.getElementById('btnGuardar').disabled = true;
+        mostrarGraficoIndividual(sim.id); 
+    }
+
+    function actualizarTabla() {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        savedSimulations.forEach(sim => {
+            const tr = document.createEl
