@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -20,13 +21,12 @@
         .grid-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
         .input-group { display: flex; flex-direction: column; }
         .input-group label { font-size: 11px; font-weight: bold; color: #333; margin-bottom: 3px; }
-        .input-group input, .input-group select { padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; }
+        .input-group input, .input-group select { padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; background: white; }
         
         /* Panel Dinámico de Onda */
-        .wave-info-box { display: flex; align-items: center; gap: 15px; background: #fff; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 10px; min-height: 50px; }
-        .wave-icon { width: 50px; height: 30px; flex-shrink: 0; }
-        .wave-text { font-size: 11px; color: #444; line-height: 1.4; }
-        .wave-text strong { color: #007bff; display: block; margin-bottom: 2px; }
+        .wave-info-box { background: #fff; padding: 12px; border: 1px solid #ccc; border-radius: 6px; margin-top: 10px; min-height: 50px; }
+        .wave-text { font-size: 11.5px; color: #444; line-height: 1.4; }
+        .wave-text strong { color: #007bff; display: block; margin-bottom: 4px; font-size: 12.5px; }
 
         .btn { border: none; padding: 8px 10px; font-size: 12px; font-weight: bold; border-radius: 5px; cursor: pointer; transition: background 0.3s; color: white; flex: 1; text-align: center; }
         .btn-calc { background: #17a2b8; }
@@ -104,7 +104,7 @@
                     <!-- Se llena con JS -->
                 </div>
 
-                <!-- BOTONES MEJORADOS -->
+                <!-- BOTONES -->
                 <div class="action-buttons">
                     <button class="btn btn-calc" onclick="calcularGrafica(false)">Calcular Normal</button>
                     <button class="btn btn-insert" onclick="calcularGrafica(true)">Insertar Carga t=3s</button>
@@ -167,49 +167,45 @@
 
     const waveInfoData = {
         'step': {
-            svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="0,18 10,18 10,2 40,2" fill="none" stroke="#007bff" stroke-width="2"/></svg>',
             title: 'Escalón Unitario',
             desc: 'Aplica la tensión máxima instantáneamente. Analiza la respuesta transitoria extrema y el pico máximo destructivo de corriente en el arranque directo.'
         },
         'square': {
-            svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="0,18 5,18 5,2 15,2 15,18 25,18 25,2 35,2 35,18 40,18" fill="none" stroke="#007bff" stroke-width="2"/></svg>',
             title: 'Onda Cuadrada',
             desc: 'Alterna bruscamente entre tensión máxima y cero. Simula modulación PWM a muy baja frecuencia para ensayos continuos de encendido y apagado.'
         },
         'ramp': {
-            svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="0,18 5,18 25,2 40,2" fill="none" stroke="#007bff" stroke-width="2"/></svg>',
             title: 'Rampa',
             desc: 'Aumenta la tensión progresivamente. Emula un arrancador suave (soft-start) para evitar el estrés mecánico y suprimir el pico de corriente inicial.'
         },
         'triangle': {
-            svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="0,18 10,2 20,18 30,2 40,18" fill="none" stroke="#007bff" stroke-width="2"/></svg>',
             title: 'Onda Triangular',
             desc: 'Sube y baja linealmente. Utilizada para evaluar la histéresis del sistema electromecánico y realizar barridos de aceleración y frenado dinámico.'
         },
         'peru': {
-            svg: '<svg viewBox="0 0 40 20" class="wave-icon"><path d="M 0 18 Q 5 0 10 18 Q 15 0 20 18 Q 25 0 30 18 Q 35 0 40 18" fill="none" stroke="#007bff" stroke-width="2"/></svg>',
             title: 'Rectificada Completa (Red Perú 60Hz)',
             desc: 'Simula la red peruana pasada por puente rectificador. Permite observar el "rizado" a 120 Hz en la corriente de armadura.'
         },
         'constant': {
-            svg: '<svg viewBox="0 0 40 20" class="wave-icon"><line x1="0" y1="10" x2="40" y2="10" stroke="#007bff" stroke-width="2"/></svg>',
             title: 'Régimen Permanente',
             desc: 'Asume que el transitorio ya finalizó. Sirve para evaluar matemáticamente el punto de operación final estacionario del motor.'
         }
     };
 
     function actualizarInfoOnda() {
-        const type = document.getElementById('signal_type').value;
-        if(!waveInfoData[type]) return;
-        const info = waveInfoData[type];
+        const selectElement = document.getElementById('signal_type');
+        const type = selectElement ? selectElement.value : 'step';
+        const info = waveInfoData[type] || waveInfoData['step'];
         const box = document.getElementById('wave-info-box');
-        box.innerHTML = `
-            ${info.svg}
-            <div class="wave-text">
-                <strong>${info.title}</strong>
-                ${info.desc}
-            </div>
-        `;
+        
+        if (box) {
+            box.innerHTML = `
+                <div class="wave-text">
+                    <strong>📌 ${info.title}</strong>
+                    ${info.desc}
+                </div>
+            `;
+        }
     }
 
     function initCharts() {
@@ -406,4 +402,98 @@
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
         savedSimulations.forEach(sim => {
-            const tr = document.createEl
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${sim.id}</td>
+                <td title="${sim.label}">${sim.params.signal_name}</td>
+                <td>${sim.params.v_a}</td>
+                <td>${sim.params.t_l}</td>
+                <td>
+                    <button class="btn btn-show" onclick="mostrarGraficoIndividual(${sim.id})">Mostrar</button>
+                    <button class="btn btn-delete" onclick="eliminarSimulacion(${sim.id})">X</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function eliminarSimulacion(id) {
+        savedSimulations = savedSimulations.filter(s => s.id !== id);
+        actualizarTabla();
+        chartWInstance.data.datasets = [];
+        chartIaInstance.data.datasets = [];
+        chartWInstance.update();
+        chartIaInstance.update();
+    }
+
+    function mostrarGraficoIndividual(id) {
+        const sim = savedSimulations.find(s => s.id === id);
+        if (!sim) return;
+
+        chartWInstance.data.datasets = [{
+            label: `Velocidad - ${sim.label}`,
+            borderColor: sim.color,
+            borderWidth: 2,
+            borderDash: [],
+            data: sim.dataW
+        }];
+        chartWInstance.update();
+
+        chartIaInstance.data.datasets = [{
+            label: `Corriente - ${sim.label}`,
+            borderColor: sim.color,
+            borderWidth: 2,
+            borderDash: [],
+            data: sim.dataIa
+        }];
+        chartIaInstance.update();
+    }
+
+    function compararGraficos() {
+        if (savedSimulations.length === 0) {
+            alert('No hay simulaciones guardadas para comparar.');
+            return;
+        }
+
+        const datasetsW = savedSimulations.map(sim => ({
+            label: sim.label,
+            borderColor: sim.color,
+            borderWidth: 1.5,
+            borderDash: [],
+            data: sim.dataW
+        }));
+
+        const datasetsIa = savedSimulations.map(sim => ({
+            label: sim.label,
+            borderColor: sim.color,
+            borderWidth: 1.5,
+            borderDash: [],
+            data: sim.dataIa
+        }));
+
+        chartWInstance.data.datasets = datasetsW;
+        chartWInstance.update();
+
+        chartIaInstance.data.datasets = datasetsIa;
+        chartIaInstance.update();
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        actualizarInfoOnda(); 
+
+        let intentos = 0;
+        let intervalo = setInterval(() => {
+            if (typeof Chart !== 'undefined') {
+                clearInterval(intervalo);
+                initCharts();
+            }
+            intentos++;
+            if (intentos > 15) { 
+                clearInterval(intervalo);
+            }
+        }, 300);
+    });
+</script>
+
+</body>
+</html>
