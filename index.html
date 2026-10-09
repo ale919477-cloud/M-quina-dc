@@ -52,7 +52,7 @@
         th { background-color: #343a40; color: white; position: sticky; top: 0; }
         
         /* Contenedor de gráficas y sus descripciones */
-        .chart-container { display: flex; flex-direction: column; height: 350px; width: 100%; background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 10px; box-sizing: border-box; }
+        .chart-container { display: flex; flex-direction: column; height: 280px; width: 100%; background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 10px; box-sizing: border-box; }
         .canvas-wrapper { flex: 1; position: relative; min-height: 0; }
         .chart-caption { text-align: center; font-size: 11.5px; color: #555; margin-top: 10px; padding-top: 8px; border-top: 1px dashed #ddd; }
         .chart-caption strong { color: #2c3e50; }
@@ -137,14 +137,25 @@
 
         <!-- Panel Derecho: Gráficas -->
         <div class="right-panel">
+            <!-- Gráfica 1: Voltaje -->
+            <div class="chart-container">
+                <div class="canvas-wrapper">
+                    <canvas id="chartVa"></canvas>
+                </div>
+                <div class="chart-caption">
+                    <strong>Gráfica de Tensión de Armadura (Va):</strong> Representa el voltaje de entrada aplicado a los bornes del motor en Volts.
+                </div>
+            </div>
+            <!-- Gráfica 2: Velocidad -->
             <div class="chart-container">
                 <div class="canvas-wrapper">
                     <canvas id="chartW"></canvas>
                 </div>
                 <div class="chart-caption">
-                    <strong>Gráfica de Velocidad Angular (ω):</strong> Representa el comportamiento mecánico del eje del motor (aceleración y desaceleración) medido en rad/s.
+                    <strong>Gráfica de Velocidad Angular (ω):</strong> Representa el comportamiento mecánico del eje del motor medido en rad/s.
                 </div>
             </div>
+            <!-- Gráfica 3: Corriente -->
             <div class="chart-container">
                 <div class="canvas-wrapper">
                     <canvas id="chartIa"></canvas>
@@ -158,6 +169,7 @@
 </div>
 
 <script>
+    let chartVaInstance = null;
     let chartWInstance = null;
     let chartIaInstance = null;
     let savedSimulations = [];
@@ -175,7 +187,7 @@
         'square': {
             svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 6,18 6,2 18,2 18,18 30,18 30,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>',
             title: 'Onda Cuadrada',
-            desc: 'Alterna bruscamente entre tensión máxima y cero. Simula modulación PWM a muy baja frecuencia para ensayos continuos de encendido y apagado.'
+            desc: 'Alterna bruscamente entre tensión máxima y cero. Simula modulación PWM a baja frecuencia para ensayos de encendido y apagado.'
         },
         'ramp': {
             svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 8,18 32,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>',
@@ -185,7 +197,7 @@
         'triangle': {
             svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 11,2 20,18 29,2 38,18" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>',
             title: 'Onda Triangular',
-            desc: 'Sube y baja linealmente. Utilizada para evaluar la histéresis del sistema electromecánico y realizar barridos de aceleración y frenado dinámico.'
+            desc: 'Sube y baja linealmente. Utilizada para evaluar la histéresis del sistema electromecánico y realizar barridos de aceleración y frenado.'
         },
         'peru': {
             svg: '<svg viewBox="0 0 40 20" class="wave-icon"><path d="M 2 18 Q 7 2 12 18 Q 17 2 22 18 Q 27 2 32 18 Q 36 2 38 18" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>',
@@ -219,6 +231,7 @@
     function initCharts() {
         if (typeof Chart === 'undefined') return;
         
+        const ctxVa = document.getElementById('chartVa').getContext('2d');
         const ctxW = document.getElementById('chartW').getContext('2d');
         const ctxIa = document.getElementById('chartIa').getContext('2d');
 
@@ -230,6 +243,12 @@
             interaction: { mode: 'index', intersect: false }
         };
 
+        chartVaInstance = new Chart(ctxVa, {
+            type: 'line',
+            data: { datasets: [] },
+            options: Object.assign({}, commonOptions, { scales: { x: { type: 'linear', title: { display: true, text: 'Tiempo (s)' } }, y: { title: { display: true, text: 'Voltaje Va (V)' } } } })
+        });
+
         chartWInstance = new Chart(ctxW, {
             type: 'line',
             data: { datasets: [] },
@@ -239,7 +258,7 @@
         chartIaInstance = new Chart(ctxIa, {
             type: 'line',
             data: { datasets: [] },
-            options: Object.assign({}, commonOptions, { scales: { x: { type: 'linear', title: { display: true, text: 'Tiempo (s)' } }, y: { title: { display: true, text: 'Corriente I_a (A)' } } } })
+            options: Object.assign({}, commonOptions, { scales: { x: { type: 'linear', title: { display: true, text: 'Tiempo (s)' } }, y: { title: { display: true, text: 'Corriente Ia (A)' } } } })
         });
     }
 
@@ -278,6 +297,7 @@
         }
 
         let ia = 0, w = 0, t = 0;
+        const dataVa = [];
         const dataW = [];
         const dataIa = [];
         const saveStep = p.signal_type === 'peru' ? (0.001 / dt) : (0.01 / dt);
@@ -296,7 +316,6 @@
                 case 'peru': va_t = p.v_a * Math.abs(Math.sin(2 * Math.PI * 60 * t)); break;
             }
 
-            // APLICACIÓN DE CARGA SEGÚN EL TIEMPO CONFIGURADO (t_load)
             let current_tl = 0;
             if (conCarga) {
                 let t_start = p.t_load;
@@ -325,11 +344,12 @@
             w += dw_dt * dt;
 
             if (i % Math.round(saveStep) === 0) { 
+                dataVa.push({ x: parseFloat(t.toFixed(4)), y: parseFloat(va_t.toFixed(2)) });
                 dataW.push({ x: parseFloat(t.toFixed(4)), y: w });
                 dataIa.push({ x: parseFloat(t.toFixed(4)), y: ia });
             }
         }
-        return { dataW, dataIa };
+        return { dataVa, dataW, dataIa };
     }
 
     function calcularGrafica(conCarga) {
@@ -352,10 +372,20 @@
 
         simulacionActual = {
             params: params,
+            dataVa: results.dataVa,
             dataW: results.dataW,
             dataIa: results.dataIa,
             label: titulo_etiqueta
         };
+
+        chartVaInstance.data.datasets = [{
+            label: `Voltaje Aplicado: ${simulacionActual.label}`,
+            borderColor: '#28a745', // Color verde distintivo para el voltaje
+            borderWidth: 2,
+            borderDash: [5, 5],
+            data: simulacionActual.dataVa
+        }];
+        chartVaInstance.update();
 
         chartWInstance.data.datasets = [{
             label: `Vista Previa: ${simulacionActual.label}`,
@@ -384,6 +414,7 @@
         const sim = {
             id: simIdCounter++,
             params: simulacionActual.params,
+            dataVa: simulacionActual.dataVa,
             dataW: simulacionActual.dataW,
             dataIa: simulacionActual.dataIa,
             color: color,
@@ -418,8 +449,10 @@
     function eliminarSimulacion(id) {
         savedSimulations = savedSimulations.filter(s => s.id !== id);
         actualizarTabla();
+        chartVaInstance.data.datasets = [];
         chartWInstance.data.datasets = [];
         chartIaInstance.data.datasets = [];
+        chartVaInstance.update();
         chartWInstance.update();
         chartIaInstance.update();
     }
@@ -427,6 +460,15 @@
     function mostrarGraficoIndividual(id) {
         const sim = savedSimulations.find(s => s.id === id);
         if (!sim) return;
+
+        chartVaInstance.data.datasets = [{
+            label: `Voltaje - ${sim.label}`,
+            borderColor: sim.color,
+            borderWidth: 2,
+            borderDash: [],
+            data: sim.dataVa
+        }];
+        chartVaInstance.update();
 
         chartWInstance.data.datasets = [{
             label: `Velocidad - ${sim.label}`,
@@ -453,6 +495,14 @@
             return;
         }
 
+        const datasetsVa = savedSimulations.map(sim => ({
+            label: sim.label,
+            borderColor: sim.color,
+            borderWidth: 1.5,
+            borderDash: [],
+            data: sim.dataVa
+        }));
+
         const datasetsW = savedSimulations.map(sim => ({
             label: sim.label,
             borderColor: sim.color,
@@ -468,6 +518,9 @@
             borderDash: [],
             data: sim.dataIa
         }));
+
+        chartVaInstance.data.datasets = datasetsVa;
+        chartVaInstance.update();
 
         chartWInstance.data.datasets = datasetsW;
         chartWInstance.update();
