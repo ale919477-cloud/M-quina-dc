@@ -288,6 +288,12 @@
         const dataVa = [], dataW = [], dataIa = [];
         const saveStep = p.signal_type === 'peru' ? (0.001 / dt) : (0.01 / dt);
 
+        // --- FORZAR PUNTO INICIAL EN 0V PARA VER EL SALTO VERTICAL ---
+        if (p.signal_type === 'step' || p.signal_type === 'square') {
+            dataVa.push({ x: 0, y: 0 }); 
+        }
+        // -------------------------------------------------------------
+
         for (let i = 0; i <= T_sim / dt; i++) {
             t = i * dt;
             let va_t = 0;
@@ -427,14 +433,13 @@
             return;
         }
 
-        // Preparar datasets vacíos inicialmente para la animación comparativa
         chartVaInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, borderWidth: 1.5, data: [] }));
         chartWInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, borderWidth: 1.5, data: [] }));
         chartIaInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, borderWidth: 1.5, data: [] }));
 
         let index = 0;
         const maxPoints = Math.max(...savedSimulations.map(sim => sim.dataW.length));
-        const chunkSize = 1; // 1 punto por ciclo para máxima precisión y lentitud
+        const chunkSize = 1; 
 
         animacionInterval = setInterval(() => {
             let endIndex = Math.min(index + chunkSize, maxPoints);
@@ -453,7 +458,7 @@
             if (index >= maxPoints) {
                 clearInterval(animacionInterval);
             }
-        }, 80); // 80 milisegundos por frame para una animación muy pausada y fluida
+        }, 80); 
     }
 
     document.addEventListener("DOMContentLoaded", function() {
