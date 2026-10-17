@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Simulador de Motor DC - Análisis Avanzado</title>
+    <title>Simulador de Motor DC - Análisis Avanzado Dinámico</title>
     <!-- Librería de Gráficas -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -54,6 +54,9 @@
         .canvas-wrapper { flex: 1; position: relative; min-height: 0; }
         .chart-caption { text-align: center; font-size: 11.5px; color: #555; margin-top: 10px; padding-top: 8px; border-top: 1px dashed #ddd; }
         .chart-caption strong { color: #2c3e50; }
+
+        /* Ocultar elementos dinámicamente */
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -67,14 +70,14 @@
             <div class="section-box">
                 <div class="section-title">1. Datos Iniciales del Motor</div>
                 <div class="grid-inputs">
-                    <div class="input-group"><label>Resistencia Inducido R_a (Ω)</label><input type="number" id="r_a" placeholder="Ej. 2.2" step="any"></div>
-                    <div class="input-group"><label>Inductancia L_a (H)</label><input type="number" id="l_a" placeholder="Ej. 0.45" step="any"></div>
-                    <div class="input-group"><label>Tensión Campo V_f (V)</label><input type="number" id="v_f" placeholder="Ej. 15" step="any"></div>
-                    <div class="input-group"><label>Resistencia Campo R_f (Ω)</label><input type="number" id="r_f" placeholder="Ej. 12" step="any"></div>
-                    <div class="input-group"><label>Inercia J (kg·m²)</label><input type="number" id="j" placeholder="Ej. 0.003" step="any"></div>
-                    <div class="input-group"><label>Fricción B (N·m·s)</label><input type="number" id="b" placeholder="Ej. 0.002" step="any"></div>
-                    <div class="input-group"><label>Const. Torque K_t</label><input type="number" id="k_t" placeholder="Ej. 0.15" step="any"></div>
-                    <div class="input-group"><label>Const. Voltaje K_v</label><input type="number" id="k_v" placeholder="Ej. 0.15" step="any"></div>
+                    <div class="input-group"><label>R_a (Ω)</label><input type="number" id="r_a" placeholder="2.2" step="any"></div>
+                    <div class="input-group"><label>L_a (H)</label><input type="number" id="l_a" placeholder="0.45" step="any"></div>
+                    <div class="input-group"><label>V_f (V)</label><input type="number" id="v_f" placeholder="15" step="any"></div>
+                    <div class="input-group"><label>R_f (Ω)</label><input type="number" id="r_f" placeholder="12" step="any"></div>
+                    <div class="input-group"><label>J (kg·m²)</label><input type="number" id="j" placeholder="0.003" step="any"></div>
+                    <div class="input-group"><label>B (N·m·s)</label><input type="number" id="b" placeholder="0.002" step="any"></div>
+                    <div class="input-group"><label>K_t</label><input type="number" id="k_t" placeholder="0.15" step="any"></div>
+                    <div class="input-group"><label>K_v</label><input type="number" id="k_v" placeholder="0.15" step="any"></div>
                 </div>
             </div>
 
@@ -82,24 +85,7 @@
             <div class="section-box">
                 <div class="section-title">2. Configuración de Tensión y Carga</div>
                 <div class="grid-inputs">
-                    <div class="input-group"><label>Amplitud Tensión V_a (V)</label><input type="number" id="v_a" placeholder="Ej. 24" step="any"></div>
-                    <div class="input-group"><label>Inicio Tensión (s)</label><input type="number" id="t_start_v" placeholder="Ej. 0" value="0" step="any" title="Momento en que el voltaje entra al sistema"></div>
-                    
-                    <div class="input-group"><label>Periodo (s) [Ondas]</label><input type="number" id="period_v" placeholder="Ej. 2" value="2" step="any"></div>
-                    <div class="input-group"><label>Duración Rampa (s)</label><input type="number" id="t_ramp" placeholder="Ej. 1.5" value="1.5" step="any"></div>
-                    
-                    <div class="input-group">
-                        <label>Polaridad (Ondas)</label>
-                        <select id="polarity_v">
-                            <option value="unipolar">Unipolar (0 a +V)</option>
-                            <option value="bipolar">Bipolar (-V a +V)</option>
-                        </select>
-                    </div>
-                    
-                    <div class="input-group"><label>Par Carga T_L (N·m)</label><input type="number" id="t_l" placeholder="Ej. 0.3" step="any"></div>
-                    <div class="input-group"><label>Inicio Carga (s)</label><input type="number" id="t_load" placeholder="Ej. 0" value="0" step="any"></div>
-                    
-                    <div class="input-group" style="grid-column: span 1;">
+                    <div class="input-group" style="grid-column: span 2;">
                         <label>Tipo de Señal V_a</label>
                         <select id="signal_type" onchange="actualizarInfoOnda()">
                             <option value="step">Escalón Unitario</option>
@@ -110,10 +96,41 @@
                             <option value="peru">Onda Rectificada</option>
                         </select>
                     </div>
+
+                    <div class="input-group"><label>Amplitud Tensión (V)</label><input type="number" id="v_a" placeholder="Ej. 24" step="any"></div>
+                    
+                    <!-- Campo Dinámico: Inicio de Tensión (Aplica para todas) -->
+                    <div class="input-group" id="grp_t_start">
+                        <label>Inicio Tensión (s)</label>
+                        <input type="number" id="t_start_v" placeholder="Ej. 0" value="0" step="any" title="Momento en que el voltaje entra al sistema">
+                    </div>
+                    
+                    <!-- Campo Dinámico: Rampa -->
+                    <div class="input-group hidden" id="grp_t_end_ramp">
+                        <label>Fin Rampa (s)</label>
+                        <input type="number" id="t_end_ramp" placeholder="Ej. 1.5" value="1.5" step="any">
+                    </div>
+
+                    <!-- Campos Dinámicos: Ondas Periódicas (Cuadrada, Senoidal, Triangular) -->
+                    <div class="input-group hidden" id="grp_period">
+                        <label>Periodo (s)</label>
+                        <input type="number" id="period_v" placeholder="Ej. 2" value="2" step="any">
+                    </div>
+                    <div class="input-group hidden" id="grp_polarity">
+                        <label>Polaridad</label>
+                        <select id="polarity_v">
+                            <option value="unipolar">Unipolar (0 a +V)</option>
+                            <option value="bipolar">Bipolar (-V a +V)</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Carga Mecánica -->
+                    <div class="input-group"><label>Par Carga T_L (N·m)</label><input type="number" id="t_l" placeholder="Ej. 0.3" step="any"></div>
+                    <div class="input-group"><label>Inicio Carga (s)</label><input type="number" id="t_load" placeholder="Ej. 0" value="0" step="any"></div>
                 </div>
 
                 <div class="wave-info-box" id="wave-info-box">
-                    <!-- Se llena con JS -->
+                    <!-- Se llena dinámicamente -->
                 </div>
 
                 <div class="action-buttons">
@@ -160,17 +177,29 @@
 
     const waveInfoData = {
         'step': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 12,18 12,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Escalón Unitario', desc: 'Aplica tensión máxima instantáneamente en el tiempo de inicio configurado.' },
-        'ramp': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 8,18 32,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Rampa', desc: 'Aumenta la tensión progresivamente según la duración configurada (Soft-start).' },
-        'square': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 6,18 6,2 18,2 18,18 30,18 30,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Cuadrada', desc: 'Alterna bruscamente evaluando el Periodo y Polaridad.' },
-        'sine': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><path d="M 2 10 Q 11 -6 20 10 Q 29 26 38 10" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Senoidal', desc: 'Señal alterna pura. Evalúa la respuesta en frecuencia.' },
-        'triangle': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 11,2 20,18 29,2 38,18" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Triangular', desc: 'Sube y baja linealmente respetando el Periodo.' },
-        'peru': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><path d="M 2 18 Q 7 2 12 18 Q 17 2 22 18 Q 27 2 32 18 Q 36 2 38 18" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Rectificada Completa', desc: 'Simula el rizado de red comercial rectificada.' }
+        'ramp': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 8,18 32,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Rampa', desc: 'Sube progresivamente desde "Inicio Tensión" hasta alcanzar V_máx en el "Fin Rampa".' },
+        'square': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 6,18 6,2 18,2 18,18 30,18 30,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Cuadrada', desc: 'Evalúa Periodo y Polaridad configurada para conmutar la fuente.' },
+        'sine': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><path d="M 2 10 Q 11 -6 20 10 Q 29 26 38 10" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Senoidal', desc: 'Señal alterna. Controla el Periodo y si evalúas la fase negativa o rectificada unipolar.' },
+        'triangle': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 11,2 20,18 29,2 38,18" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Triangular', desc: 'Ascenso y descenso lineal respetando el Periodo.' },
+        'peru': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><path d="M 2 18 Q 7 2 12 18 Q 17 2 22 18 Q 27 2 32 18 Q 36 2 38 18" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Rectificada Completa', desc: 'Rizado continuo de 120Hz estándar.' }
     };
 
     function actualizarInfoOnda() {
         const type = document.getElementById('signal_type').value;
         const info = waveInfoData[type];
         document.getElementById('wave-info-box').innerHTML = `${info.svg}<div class="wave-text"><strong>📌 ${info.title}</strong>${info.desc}</div>`;
+
+        // Lógica para mostrar/ocultar campos dinámicamente según la onda elegida
+        document.getElementById('grp_t_end_ramp').classList.add('hidden');
+        document.getElementById('grp_period').classList.add('hidden');
+        document.getElementById('grp_polarity').classList.add('hidden');
+
+        if (type === 'ramp') {
+            document.getElementById('grp_t_end_ramp').classList.remove('hidden');
+        } else if (type === 'square' || type === 'sine' || type === 'triangle') {
+            document.getElementById('grp_period').classList.remove('hidden');
+            document.getElementById('grp_polarity').classList.remove('hidden');
+        }
     }
 
     function initCharts() {
@@ -182,7 +211,7 @@
     }
 
     function obtenerDatos() {
-        const defs = { 'r_a': 2.2, 'l_a': 0.45, 'v_f': 15, 'r_f': 12, 'j': 0.003, 'b': 0.002, 'k_t': 0.15, 'k_v': 0.15, 'v_a': 24, 't_l': 0.3, 't_load': 0, 't_start_v': 0, 'period_v': 2, 't_ramp': 1.5 };
+        const defs = { 'r_a': 2.2, 'l_a': 0.45, 'v_f': 15, 'r_f': 12, 'j': 0.003, 'b': 0.002, 'k_t': 0.15, 'k_v': 0.15, 'v_a': 24, 't_l': 0.3, 't_load': 0, 't_start_v': 0, 't_end_ramp': 1.5, 'period_v': 2 };
         const v = {};
         for (let id in defs) {
             let el = document.getElementById(id); let val = el.value;
@@ -211,7 +240,7 @@
             let va_t = 0;
 
             if (t >= p.t_start_v) {
-                let t_v = t - p.t_start_v; // Tiempo relativo a la señal
+                let t_v = t - p.t_start_v; // Tiempo cero relativo al inicio de la señal
                 
                 switch(p.signal_type) {
                     case 'step': 
@@ -222,7 +251,9 @@
                         va_t = (cycle_sq < p.period_v / 2) ? p.v_a : (p.polarity_v === 'bipolar' ? -p.v_a : 0);
                         break;
                     case 'ramp': 
-                        va_t = t_v <= p.t_ramp ? (p.v_a / p.t_ramp) * t_v : p.v_a; 
+                        let ramp_duration = p.t_end_ramp - p.t_start_v;
+                        if (ramp_duration <= 0) ramp_duration = 0.001; // Evitar división por cero
+                        va_t = t_v <= ramp_duration ? (p.v_a / ramp_duration) * t_v : p.v_a; 
                         break;
                     case 'triangle': 
                         let norm_tr = (t_v % p.period_v) / p.period_v;
@@ -244,7 +275,7 @@
                         break;
                 }
             } else {
-                va_t = 0; // Antes de que inicie la tensión
+                va_t = 0; // Antes del tiempo de inicio, el voltaje es 0
             }
 
             let current_tl = 0;
@@ -282,20 +313,4 @@
         simulacionActual = { params, dataVa: results.dataVa, dataW: results.dataW, dataIa: results.dataIa, label: titulo_etiqueta };
 
         chartVaInstance.data.datasets = [{ label: `Voltaje - ${titulo_etiqueta}`, borderColor: '#28a745', borderWidth: 2, data: results.dataVa }]; chartVaInstance.update();
-        chartWInstance.data.datasets = [{ label: `Velocidad - ${titulo_etiqueta}`, borderColor: conCarga ? '#fd7e14' : '#007bff', borderWidth: 2, data: results.dataW }]; chartWInstance.update();
-        chartIaInstance.data.datasets = [{ label: `Corriente - ${titulo_etiqueta}`, borderColor: conCarga ? '#fd7e14' : '#007bff', borderWidth: 2, data: results.dataIa }]; chartIaInstance.update();
-        document.getElementById('btnGuardar').disabled = false;
-    }
-
-    function guardarSimulacion() {
-        if (!simulacionActual) return;
-        const sim = { id: simIdCounter++, params: simulacionActual.params, dataVa: simulacionActual.dataVa, dataW: simulacionActual.dataW, dataIa: simulacionActual.dataIa, color: colors[savedSimulations.length % colors.length], label: simulacionActual.label };
-        savedSimulations.push(sim); actualizarTabla(); simulacionActual = null;
-        document.getElementById('btnGuardar').disabled = true; mostrarGraficoIndividual(sim.id); 
-    }
-
-    function actualizarTabla() {
-        const tbody = document.getElementById('tableBody'); tbody.innerHTML = '';
-        savedSimulations.forEach(sim => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${sim.id}</td><td title="${sim.label}">${sim.params.signal_name}</td><td>${sim.params.v_a}</td><td>${sim.params.t_l}</td><td><button class="btn btn-show" onclick="mostrarGraficoIndividual(${sim.id})">Mostrar</button> <button class="btn btn-de
+        chartWInstance.data.datasets = [{ l
