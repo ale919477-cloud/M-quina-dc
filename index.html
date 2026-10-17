@@ -54,9 +54,6 @@
         .canvas-wrapper { flex: 1; position: relative; min-height: 0; }
         .chart-caption { text-align: center; font-size: 11.5px; color: #555; margin-top: 10px; padding-top: 8px; border-top: 1px dashed #ddd; }
         .chart-caption strong { color: #2c3e50; }
-
-        /* Ocultar elementos dinámicamente */
-        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -97,26 +94,32 @@
                         </select>
                     </div>
 
-                    <div class="input-group"><label>Amplitud Tensión (V)</label><input type="number" id="v_a" placeholder="Ej. 24" step="any"></div>
+                    <div class="input-group"><label>Amplitud Tensión (V)</label><input type="number" id="v_a" value="24" step="any"></div>
                     
-                    <!-- Campo Dinámico: Inicio de Tensión (Aplica para todas) -->
-                    <div class="input-group" id="grp_t_start">
-                        <label>Inicio Tensión (s)</label>
-                        <input type="number" id="t_start_v" placeholder="Ej. 0" value="0" step="any" title="Momento en que el voltaje entra al sistema">
+                    <!-- CAMPOS DINÁMICOS EXCLUSIVOS -->
+                    
+                    <!-- Exclusivo Escalón -->
+                    <div class="input-group dyn-field" id="grp_start_step">
+                        <label>Inicio Escalón (s)</label>
+                        <input type="number" id="t_start_step" value="0" step="any">
                     </div>
                     
-                    <!-- Campo Dinámico: Rampa -->
-                    <div class="input-group hidden" id="grp_t_end_ramp">
+                    <!-- Exclusivo Rampa -->
+                    <div class="input-group dyn-field" id="grp_start_ramp" style="display: none;">
+                        <label>Inicio Rampa (s)</label>
+                        <input type="number" id="t_start_ramp" value="0" step="any">
+                    </div>
+                    <div class="input-group dyn-field" id="grp_end_ramp" style="display: none;">
                         <label>Fin Rampa (s)</label>
-                        <input type="number" id="t_end_ramp" placeholder="Ej. 1.5" value="1.5" step="any">
+                        <input type="number" id="t_end_ramp" value="1.5" step="any">
                     </div>
 
-                    <!-- Campos Dinámicos: Ondas Periódicas (Cuadrada, Senoidal, Triangular) -->
-                    <div class="input-group hidden" id="grp_period">
+                    <!-- Exclusivo Periódicas -->
+                    <div class="input-group dyn-field" id="grp_period" style="display: none;">
                         <label>Periodo (s)</label>
-                        <input type="number" id="period_v" placeholder="Ej. 2" value="2" step="any">
+                        <input type="number" id="period_v" value="2" step="any">
                     </div>
-                    <div class="input-group hidden" id="grp_polarity">
+                    <div class="input-group dyn-field" id="grp_polarity" style="display: none;">
                         <label>Polaridad</label>
                         <select id="polarity_v">
                             <option value="unipolar">Unipolar (0 a +V)</option>
@@ -124,9 +127,9 @@
                         </select>
                     </div>
                     
-                    <!-- Carga Mecánica -->
-                    <div class="input-group"><label>Par Carga T_L (N·m)</label><input type="number" id="t_l" placeholder="Ej. 0.3" step="any"></div>
-                    <div class="input-group"><label>Inicio Carga (s)</label><input type="number" id="t_load" placeholder="Ej. 0" value="0" step="any"></div>
+                    <!-- Carga General -->
+                    <div class="input-group"><label>Par Carga T_L (N·m)</label><input type="number" id="t_l" value="0.3" step="any"></div>
+                    <div class="input-group"><label>Inicio Carga (s)</label><input type="number" id="t_load" value="0" step="any"></div>
                 </div>
 
                 <div class="wave-info-box" id="wave-info-box">
@@ -177,28 +180,30 @@
 
     const waveInfoData = {
         'step': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 12,18 12,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Escalón Unitario', desc: 'Aplica tensión máxima instantáneamente en el tiempo de inicio configurado.' },
-        'ramp': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 8,18 32,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Rampa', desc: 'Sube progresivamente desde "Inicio Tensión" hasta alcanzar V_máx en el "Fin Rampa".' },
-        'square': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 6,18 6,2 18,2 18,18 30,18 30,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Cuadrada', desc: 'Evalúa Periodo y Polaridad configurada para conmutar la fuente.' },
-        'sine': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><path d="M 2 10 Q 11 -6 20 10 Q 29 26 38 10" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Senoidal', desc: 'Señal alterna. Controla el Periodo y si evalúas la fase negativa o rectificada unipolar.' },
-        'triangle': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 11,2 20,18 29,2 38,18" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Triangular', desc: 'Ascenso y descenso lineal respetando el Periodo.' },
-        'peru': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><path d="M 2 18 Q 7 2 12 18 Q 17 2 22 18 Q 27 2 32 18 Q 36 2 38 18" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Rectificada Completa', desc: 'Rizado continuo de 120Hz estándar.' }
+        'ramp': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 8,18 32,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Rampa', desc: 'Sube progresivamente desde su Inicio hasta alcanzar V_máx al Finalizar la rampa.' },
+        'square': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 6,18 6,2 18,2 18,18 30,18 30,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Cuadrada', desc: 'Conmuta de forma abrupta respetando el Periodo y Polaridad configurada.' },
+        'sine': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><path d="M 2 10 Q 11 -6 20 10 Q 29 26 38 10" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Senoidal', desc: 'Señal alterna pura. Útil para observar el desfase de la inductancia.' },
+        'triangle': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 11,2 20,18 29,2 38,18" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Triangular', desc: 'Ascenso y descenso lineal según su Periodo y Polaridad.' },
+        'peru': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><path d="M 2 18 Q 7 2 12 18 Q 17 2 22 18 Q 27 2 32 18 Q 36 2 38 18" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Rectificada Completa', desc: 'Rizado continuo típico de un puente rectificador (120Hz).' }
     };
 
     function actualizarInfoOnda() {
         const type = document.getElementById('signal_type').value;
         const info = waveInfoData[type];
-        document.getElementById('wave-info-box').innerHTML = `${info.svg}<div class="wave-text"><strong>📌 ${info.title}</strong>${info.desc}</div>`;
+        document.getElementById('wave-info-box').innerHTML = `${info.svg}<div class="wave-text"><strong>📌 ${info.title}</strong><br>${info.desc}</div>`;
 
-        // Lógica para mostrar/ocultar campos dinámicamente según la onda elegida
-        document.getElementById('grp_t_end_ramp').classList.add('hidden');
-        document.getElementById('grp_period').classList.add('hidden');
-        document.getElementById('grp_polarity').classList.add('hidden');
+        // Ocultar forzosamente TODOS los campos dinámicos primero
+        document.querySelectorAll('.dyn-field').forEach(el => el.style.display = 'none');
 
-        if (type === 'ramp') {
-            document.getElementById('grp_t_end_ramp').classList.remove('hidden');
+        // Mostrar estrictamente los que pertenecen a la onda seleccionada
+        if (type === 'step') {
+            document.getElementById('grp_start_step').style.display = 'flex';
+        } else if (type === 'ramp') {
+            document.getElementById('grp_start_ramp').style.display = 'flex';
+            document.getElementById('grp_end_ramp').style.display = 'flex';
         } else if (type === 'square' || type === 'sine' || type === 'triangle') {
-            document.getElementById('grp_period').classList.remove('hidden');
-            document.getElementById('grp_polarity').classList.remove('hidden');
+            document.getElementById('grp_period').style.display = 'flex';
+            document.getElementById('grp_polarity').style.display = 'flex';
         }
     }
 
@@ -211,7 +216,7 @@
     }
 
     function obtenerDatos() {
-        const defs = { 'r_a': 2.2, 'l_a': 0.45, 'v_f': 15, 'r_f': 12, 'j': 0.003, 'b': 0.002, 'k_t': 0.15, 'k_v': 0.15, 'v_a': 24, 't_l': 0.3, 't_load': 0, 't_start_v': 0, 't_end_ramp': 1.5, 'period_v': 2 };
+        const defs = { 'r_a': 2.2, 'l_a': 0.45, 'v_f': 15, 'r_f': 12, 'j': 0.003, 'b': 0.002, 'k_t': 0.15, 'k_v': 0.15, 'v_a': 24, 't_l': 0.3, 't_load': 0, 't_start_step': 0, 't_start_ramp': 0, 't_end_ramp': 1.5, 'period_v': 2 };
         const v = {};
         for (let id in defs) {
             let el = document.getElementById(id); let val = el.value;
@@ -233,14 +238,22 @@
         const dataVa = [], dataW = [], dataIa = [];
         const saveStep = dt < 0.001 ? (0.001 / dt) : (0.01 / dt);
 
-        if ((p.signal_type === 'step' || p.signal_type === 'square') && p.t_start_v === 0) dataVa.push({ x: 0, y: 0 });
+        // Definir en qué segundo exacto debe iniciar el cálculo la fuente
+        let t_start_v = 0;
+        if (p.signal_type === 'step') t_start_v = p.t_start_step;
+        else if (p.signal_type === 'ramp') t_start_v = p.t_start_ramp;
+
+        // Forzar dibujo en 0V al inicio para saltos verticales (Escalón o Cuadrada)
+        if ((p.signal_type === 'step' || p.signal_type === 'square') && t_start_v === 0) {
+            dataVa.push({ x: 0, y: 0 });
+        }
 
         for (let i = 0; i <= T_sim / dt; i++) {
             t = i * dt;
             let va_t = 0;
 
-            if (t >= p.t_start_v) {
-                let t_v = t - p.t_start_v; // Tiempo cero relativo al inicio de la señal
+            if (t >= t_start_v) {
+                let t_v = t - t_start_v; // El tiempo relativo para las fórmulas
                 
                 switch(p.signal_type) {
                     case 'step': 
@@ -251,7 +264,7 @@
                         va_t = (cycle_sq < p.period_v / 2) ? p.v_a : (p.polarity_v === 'bipolar' ? -p.v_a : 0);
                         break;
                     case 'ramp': 
-                        let ramp_duration = p.t_end_ramp - p.t_start_v;
+                        let ramp_duration = p.t_end_ramp - p.t_start_ramp;
                         if (ramp_duration <= 0) ramp_duration = 0.001; // Evitar división por cero
                         va_t = t_v <= ramp_duration ? (p.v_a / ramp_duration) * t_v : p.v_a; 
                         break;
@@ -275,7 +288,7 @@
                         break;
                 }
             } else {
-                va_t = 0; // Antes del tiempo de inicio, el voltaje es 0
+                va_t = 0; // Antes de que inicie la fuente el voltaje es 0
             }
 
             let current_tl = 0;
@@ -313,4 +326,70 @@
         simulacionActual = { params, dataVa: results.dataVa, dataW: results.dataW, dataIa: results.dataIa, label: titulo_etiqueta };
 
         chartVaInstance.data.datasets = [{ label: `Voltaje - ${titulo_etiqueta}`, borderColor: '#28a745', borderWidth: 2, data: results.dataVa }]; chartVaInstance.update();
-        chartWInstance.data.datasets = [{ l
+        chartWInstance.data.datasets = [{ label: `Velocidad - ${titulo_etiqueta}`, borderColor: conCarga ? '#fd7e14' : '#007bff', borderWidth: 2, data: results.dataW }]; chartWInstance.update();
+        chartIaInstance.data.datasets = [{ label: `Corriente - ${titulo_etiqueta}`, borderColor: conCarga ? '#fd7e14' : '#007bff', borderWidth: 2, data: results.dataIa }]; chartIaInstance.update();
+        document.getElementById('btnGuardar').disabled = false;
+    }
+
+    function guardarSimulacion() {
+        if (!simulacionActual) return;
+        const sim = { id: simIdCounter++, params: simulacionActual.params, dataVa: simulacionActual.dataVa, dataW: simulacionActual.dataW, dataIa: simulacionActual.dataIa, color: colors[savedSimulations.length % colors.length], label: simulacionActual.label };
+        savedSimulations.push(sim); actualizarTabla(); simulacionActual = null;
+        document.getElementById('btnGuardar').disabled = true; mostrarGraficoIndividual(sim.id); 
+    }
+
+    function actualizarTabla() {
+        const tbody = document.getElementById('tableBody'); tbody.innerHTML = '';
+        savedSimulations.forEach(sim => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${sim.id}</td><td title="${sim.label}">${sim.params.signal_name}</td><td>${sim.params.v_a}</td><td>${sim.params.t_l}</td><td><button class="btn btn-show" onclick="mostrarGraficoIndividual(${sim.id})">Mostrar</button> <button class="btn btn-delete" onclick="eliminarSimulacion(${sim.id})">X</button></td>`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function eliminarSimulacion(id) {
+        savedSimulations = savedSimulations.filter(s => s.id !== id); actualizarTabla();
+        chartVaInstance.data.datasets = []; chartWInstance.data.datasets = []; chartIaInstance.data.datasets = [];
+        chartVaInstance.update(); chartWInstance.update(); chartIaInstance.update();
+    }
+
+    function mostrarGraficoIndividual(id) {
+        if (animacionInterval) clearInterval(animacionInterval);
+        const sim = savedSimulations.find(s => s.id === id); if (!sim) return;
+        chartVaInstance.data.datasets = [{ label: `Voltaje - ${sim.label}`, borderColor: sim.color, borderWidth: 2, data: sim.dataVa }]; chartVaInstance.update();
+        chartWInstance.data.datasets = [{ label: `Velocidad - ${sim.label}`, borderColor: sim.color, borderWidth: 2, data: sim.dataW }]; chartWInstance.update();
+        chartIaInstance.data.datasets = [{ label: `Corriente - ${sim.label}`, borderColor: sim.color, borderWidth: 2, data: sim.dataIa }]; chartIaInstance.update();
+    }
+
+    function compararGraficosAnimados() {
+        if (animacionInterval) clearInterval(animacionInterval);
+        if (savedSimulations.length === 0) { alert('No hay simulaciones guardadas para comparar.'); return; }
+
+        chartVaInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, borderWidth: 1.5, data: [] }));
+        chartWInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, borderWidth: 1.5, data: [] }));
+        chartIaInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, borderWidth: 1.5, data: [] }));
+
+        let index = 0; const maxPoints = Math.max(...savedSimulations.map(sim => sim.dataW.length));
+        animacionInterval = setInterval(() => {
+            let endIndex = Math.min(index + 1, maxPoints);
+            savedSimulations.forEach((sim, idx) => {
+                chartVaInstance.data.datasets[idx].data = sim.dataVa.slice(0, endIndex);
+                chartWInstance.data.datasets[idx].data = sim.dataW.slice(0, endIndex);
+                chartIaInstance.data.datasets[idx].data = sim.dataIa.slice(0, endIndex);
+            });
+            chartVaInstance.update('none'); chartWInstance.update('none'); chartIaInstance.update('none');
+            index = endIndex; if (index >= maxPoints) clearInterval(animacionInterval);
+        }, 80); 
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        actualizarInfoOnda(); // Ejecutar al inicio para ocultar todo lo que no toca
+        let intentos = 0; let intervalo = setInterval(() => {
+            if (typeof Chart !== 'undefined') { clearInterval(intervalo); initCharts(); }
+            intentos++; if (intentos > 15) clearInterval(intervalo);
+        }, 300);
+    });
+</script>
+
+</body>
+</html>
