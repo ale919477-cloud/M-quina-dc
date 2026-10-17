@@ -96,15 +96,13 @@
 
                     <div class="input-group"><label>Amplitud Tensión (V)</label><input type="number" id="v_a" value="24" step="any"></div>
                     
-                    <!-- CAMPOS DINÁMICOS EXCLUSIVOS -->
-                    
-                    <!-- Exclusivo Escalón -->
+                    <!-- CAMPOS DINÁMICOS: ESCALÓN -->
                     <div class="input-group dyn-field" id="grp_start_step">
                         <label>Inicio Escalón (s)</label>
-                        <input type="number" id="t_start_step" value="0" step="any">
+                        <input type="number" id="t_start_step" value="0" step="any" title="Segundo en el que ingresa el escalón de voltaje">
                     </div>
                     
-                    <!-- Exclusivo Rampa -->
+                    <!-- CAMPOS DINÁMICOS: RAMPA -->
                     <div class="input-group dyn-field" id="grp_start_ramp" style="display: none;">
                         <label>Inicio Rampa (s)</label>
                         <input type="number" id="t_start_ramp" value="0" step="any">
@@ -114,7 +112,7 @@
                         <input type="number" id="t_end_ramp" value="1.5" step="any">
                     </div>
 
-                    <!-- Exclusivo Periódicas -->
+                    <!-- CAMPOS DINÁMICOS: ONDAS PERIÓDICAS -->
                     <div class="input-group dyn-field" id="grp_period" style="display: none;">
                         <label>Periodo (s)</label>
                         <input type="number" id="period_v" value="2" step="any">
@@ -122,12 +120,12 @@
                     <div class="input-group dyn-field" id="grp_polarity" style="display: none;">
                         <label>Polaridad</label>
                         <select id="polarity_v">
-                            <option value="unipolar">Unipolar (0 a +V)</option>
-                            <option value="bipolar">Bipolar (-V a +V)</option>
+                            <option value="unipolar">Solo Positivo (0 a +V)</option>
+                            <option value="bipolar">Positivo y Negativo (-V a +V)</option>
                         </select>
                     </div>
                     
-                    <!-- Carga General -->
+                    <!-- Carga General (Siempre visible) -->
                     <div class="input-group"><label>Par Carga T_L (N·m)</label><input type="number" id="t_l" value="0.3" step="any"></div>
                     <div class="input-group"><label>Inicio Carga (s)</label><input type="number" id="t_load" value="0" step="any"></div>
                 </div>
@@ -179,23 +177,23 @@
     const colors = ['#007bff', '#dc3545', '#28a745', '#ffc107', '#6f42c1', '#fd7e14', '#20c997', '#e83e8c'];
 
     const waveInfoData = {
-        'step': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 12,18 12,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Escalón Unitario', desc: 'Aplica tensión máxima instantáneamente en el tiempo de inicio configurado.' },
-        'ramp': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 8,18 32,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Rampa', desc: 'Sube progresivamente desde su Inicio hasta alcanzar V_máx al Finalizar la rampa.' },
-        'square': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 6,18 6,2 18,2 18,18 30,18 30,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Cuadrada', desc: 'Conmuta de forma abrupta respetando el Periodo y Polaridad configurada.' },
-        'sine': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><path d="M 2 10 Q 11 -6 20 10 Q 29 26 38 10" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Senoidal', desc: 'Señal alterna pura. Útil para observar el desfase de la inductancia.' },
-        'triangle': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 11,2 20,18 29,2 38,18" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Triangular', desc: 'Ascenso y descenso lineal según su Periodo y Polaridad.' },
-        'peru': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><path d="M 2 18 Q 7 2 12 18 Q 17 2 22 18 Q 27 2 32 18 Q 36 2 38 18" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Rectificada Completa', desc: 'Rizado continuo típico de un puente rectificador (120Hz).' }
+        'step': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 12,18 12,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Escalón Unitario', desc: 'Aplica la tensión de forma instantánea en el segundo exacto que configures.' },
+        'ramp': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 8,18 32,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Rampa', desc: 'Asciende progresivamente desde el "Inicio Rampa" hasta alcanzar su máximo en el "Fin Rampa".' },
+        'square': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 6,18 6,2 18,2 18,18 30,18 30,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Cuadrada', desc: 'Alterna bruscamente evaluando el Periodo. Puedes elegir si incluye fase negativa.' },
+        'sine': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><path d="M 2 10 Q 11 -6 20 10 Q 29 26 38 10" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Senoidal', desc: 'Señal alterna. Controla el Periodo y si evalúas la fase negativa o rectificada unipolar.' },
+        'triangle': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 11,2 20,18 29,2 38,18" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Triangular', desc: 'Ascenso y descenso lineal respetando el Periodo configurado.' },
+        'peru': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><path d="M 2 18 Q 7 2 12 18 Q 17 2 22 18 Q 27 2 32 18 Q 36 2 38 18" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Rectificada Completa', desc: 'Rizado continuo de red a 120Hz.' }
     };
 
     function actualizarInfoOnda() {
         const type = document.getElementById('signal_type').value;
         const info = waveInfoData[type];
-        document.getElementById('wave-info-box').innerHTML = `${info.svg}<div class="wave-text"><strong>📌 ${info.title}</strong><br>${info.desc}</div>`;
+        document.getElementById('wave-info-box').innerHTML = `${info.svg}<div class="wave-text"><strong>📌 ${info.title}</strong>${info.desc}</div>`;
 
-        // Ocultar forzosamente TODOS los campos dinámicos primero
+        // 1. Ocultar TODOS los campos dinámicos
         document.querySelectorAll('.dyn-field').forEach(el => el.style.display = 'none');
 
-        // Mostrar estrictamente los que pertenecen a la onda seleccionada
+        // 2. Mostrar EXCLUSIVAMENTE los que pertenecen a la onda seleccionada
         if (type === 'step') {
             document.getElementById('grp_start_step').style.display = 'flex';
         } else if (type === 'ramp') {
@@ -225,7 +223,7 @@
         }
         v.signal_type = document.getElementById('signal_type').value;
         v.signal_name = waveInfoData[v.signal_type].title;
-        v.polarity_v = document.getElementById('polarity_v').value;
+        v.polarity_v = document.getElementById('polarity_v') ? document.getElementById('polarity_v').value : 'unipolar';
         return v;
     }
 
@@ -238,22 +236,19 @@
         const dataVa = [], dataW = [], dataIa = [];
         const saveStep = dt < 0.001 ? (0.001 / dt) : (0.01 / dt);
 
-        // Definir en qué segundo exacto debe iniciar el cálculo la fuente
+        // Controlamos el tiempo de inicio exclusivo
         let t_start_v = 0;
         if (p.signal_type === 'step') t_start_v = p.t_start_step;
         else if (p.signal_type === 'ramp') t_start_v = p.t_start_ramp;
 
-        // Forzar dibujo en 0V al inicio para saltos verticales (Escalón o Cuadrada)
-        if ((p.signal_type === 'step' || p.signal_type === 'square') && t_start_v === 0) {
-            dataVa.push({ x: 0, y: 0 });
-        }
+        if ((p.signal_type === 'step' || p.signal_type === 'square') && t_start_v === 0) dataVa.push({ x: 0, y: 0 });
 
         for (let i = 0; i <= T_sim / dt; i++) {
             t = i * dt;
             let va_t = 0;
 
             if (t >= t_start_v) {
-                let t_v = t - t_start_v; // El tiempo relativo para las fórmulas
+                let t_v = t - t_start_v; // Tiempo de cálculo interno de la onda
                 
                 switch(p.signal_type) {
                     case 'step': 
@@ -265,7 +260,7 @@
                         break;
                     case 'ramp': 
                         let ramp_duration = p.t_end_ramp - p.t_start_ramp;
-                        if (ramp_duration <= 0) ramp_duration = 0.001; // Evitar división por cero
+                        if (ramp_duration <= 0) ramp_duration = 0.001; 
                         va_t = t_v <= ramp_duration ? (p.v_a / ramp_duration) * t_v : p.v_a; 
                         break;
                     case 'triangle': 
@@ -288,7 +283,7 @@
                         break;
                 }
             } else {
-                va_t = 0; // Antes de que inicie la fuente el voltaje es 0
+                va_t = 0; // Antes de iniciar, el voltaje es cero
             }
 
             let current_tl = 0;
@@ -383,7 +378,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", function() {
-        actualizarInfoOnda(); // Ejecutar al inicio para ocultar todo lo que no toca
+        actualizarInfoOnda(); // Ejecuta al inicio para esconder los que no corresponden
         let intentos = 0; let intervalo = setInterval(() => {
             if (typeof Chart !== 'undefined') { clearInterval(intervalo); initCharts(); }
             intentos++; if (intentos > 15) clearInterval(intervalo);
