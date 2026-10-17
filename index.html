@@ -2,27 +2,26 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Simulador de Motor DC - Comparativa Animada</title>
+    <title>Simulador de Motor DC - Análisis Avanzado</title>
     <!-- Librería de Gráficas -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .main-container { width: 95%; max-width: 1300px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .main-container { width: 95%; max-width: 1350px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         h2 { text-align: center; color: #2c3e50; margin-top: 0; margin-bottom: 20px;}
         
         .layout { display: flex; gap: 20px; flex-wrap: wrap; }
-        .left-panel { flex: 1; min-width: 350px; display: flex; flex-direction: column; gap: 15px; }
+        .left-panel { flex: 1; min-width: 380px; display: flex; flex-direction: column; gap: 15px; }
         .right-panel { flex: 2; min-width: 500px; display: flex; flex-direction: column; gap: 15px; }
 
         .section-box { background: #e9ecef; padding: 15px; border-radius: 8px; border: 1px solid #ced4da; }
         .section-title { font-size: 14px; font-weight: bold; color: #495057; margin-bottom: 10px; border-bottom: 2px solid #adb5bd; padding-bottom: 5px; }
         
-        .grid-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+        .grid-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 10px; }
         .input-group { display: flex; flex-direction: column; }
         .input-group label { font-size: 11px; font-weight: bold; color: #333; margin-bottom: 3px; }
         .input-group input, .input-group select { padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; background: white; }
         
-        /* Panel Dinámico de Onda con Gráfica SVG */
         .wave-info-box { display: flex; align-items: center; gap: 12px; background: #fff; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 10px; min-height: 55px; }
         .wave-icon { width: 60px; height: 35px; flex-shrink: 0; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 2px; }
         .wave-text { font-size: 11px; color: #444; line-height: 1.3; }
@@ -51,7 +50,6 @@
         th, td { padding: 8px; border-bottom: 1px solid #ddd; }
         th { background-color: #343a40; color: white; position: sticky; top: 0; }
         
-        /* Contenedor de gráficas y sus descripciones */
         .chart-container { display: flex; flex-direction: column; height: 280px; width: 100%; background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 10px; box-sizing: border-box; }
         .canvas-wrapper { flex: 1; position: relative; min-height: 0; }
         .chart-caption { text-align: center; font-size: 11.5px; color: #555; margin-top: 10px; padding-top: 8px; border-top: 1px dashed #ddd; }
@@ -64,7 +62,6 @@
     <h2>Simulador Dinámico: Motor DC</h2>
     
     <div class="layout">
-        <!-- Panel Izquierdo: Configuración y Tabla -->
         <div class="left-panel">
             <!-- 1. Datos Iniciales -->
             <div class="section-box">
@@ -83,17 +80,32 @@
 
             <!-- 2. Datos de Simulación -->
             <div class="section-box">
-                <div class="section-title">2. Datos de Simulación</div>
+                <div class="section-title">2. Configuración de Tensión y Carga</div>
                 <div class="grid-inputs">
                     <div class="input-group"><label>Amplitud Tensión V_a (V)</label><input type="number" id="v_a" placeholder="Ej. 24" step="any"></div>
-                    <div class="input-group"><label>Par de Carga T_L (N·m)</label><input type="number" id="t_l" placeholder="Ej. 0.3" step="any"></div>
-                    <div class="input-group"><label>Tiempo Carga t_load (s)</label><input type="number" id="t_load" placeholder="Ej. 0" value="0" step="any"></div>
-                    <div class="input-group" style="grid-column: span 2;">
+                    <div class="input-group"><label>Inicio Tensión (s)</label><input type="number" id="t_start_v" placeholder="Ej. 0" value="0" step="any" title="Momento en que el voltaje entra al sistema"></div>
+                    
+                    <div class="input-group"><label>Periodo (s) [Ondas]</label><input type="number" id="period_v" placeholder="Ej. 2" value="2" step="any"></div>
+                    <div class="input-group"><label>Duración Rampa (s)</label><input type="number" id="t_ramp" placeholder="Ej. 1.5" value="1.5" step="any"></div>
+                    
+                    <div class="input-group">
+                        <label>Polaridad (Ondas)</label>
+                        <select id="polarity_v">
+                            <option value="unipolar">Unipolar (0 a +V)</option>
+                            <option value="bipolar">Bipolar (-V a +V)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group"><label>Par Carga T_L (N·m)</label><input type="number" id="t_l" placeholder="Ej. 0.3" step="any"></div>
+                    <div class="input-group"><label>Inicio Carga (s)</label><input type="number" id="t_load" placeholder="Ej. 0" value="0" step="any"></div>
+                    
+                    <div class="input-group" style="grid-column: span 1;">
                         <label>Tipo de Señal V_a</label>
                         <select id="signal_type" onchange="actualizarInfoOnda()">
                             <option value="step">Escalón Unitario</option>
-                            <option value="square">Onda Cuadrada</option>
                             <option value="ramp">Rampa</option>
+                            <option value="square">Onda Cuadrada</option>
+                            <option value="sine">Onda Senoidal</option>
                             <option value="triangle">Onda Triangular</option>
                             <option value="peru">Onda Rectificada</option>
                         </select>
@@ -104,7 +116,6 @@
                     <!-- Se llena con JS -->
                 </div>
 
-                <!-- BOTONES -->
                 <div class="action-buttons">
                     <button class="btn btn-calc" onclick="calcularGrafica(false)">Calcular Sin Carga</button>
                     <button class="btn btn-insert" onclick="calcularGrafica(true)">Calcular Con Carga</button>
@@ -134,187 +145,115 @@
             </div>
         </div>
 
-        <!-- Panel Derecho: Gráficas -->
         <div class="right-panel">
-            <!-- Gráfica 1: Voltaje -->
-            <div class="chart-container">
-                <div class="canvas-wrapper">
-                    <canvas id="chartVa"></canvas>
-                </div>
-                <div class="chart-caption">
-                    <strong>Gráfica de Tensión de Armadura (Va):</strong> Forma de onda aplicada en Volts.
-                </div>
-            </div>
-            <!-- Gráfica 2: Velocidad -->
-            <div class="chart-container">
-                <div class="canvas-wrapper">
-                    <canvas id="chartW"></canvas>
-                </div>
-                <div class="chart-caption">
-                    <strong>Gráfica de Velocidad Angular (ω):</strong> Comportamiento mecánico en rad/s.
-                </div>
-            </div>
-            <!-- Gráfica 3: Corriente -->
-            <div class="chart-container">
-                <div class="canvas-wrapper">
-                    <canvas id="chartIa"></canvas>
-                </div>
-                <div class="chart-caption">
-                    <strong>Gráfica de Corriente de Armadura (Ia):</strong> Consumo eléctrico y picos en Amperios.
-                </div>
-            </div>
+            <div class="chart-container"><div class="canvas-wrapper"><canvas id="chartVa"></canvas></div><div class="chart-caption"><strong>Gráfica de Tensión de Armadura (Va)</strong></div></div>
+            <div class="chart-container"><div class="canvas-wrapper"><canvas id="chartW"></canvas></div><div class="chart-caption"><strong>Gráfica de Velocidad Angular (ω)</strong></div></div>
+            <div class="chart-container"><div class="canvas-wrapper"><canvas id="chartIa"></canvas></div><div class="chart-caption"><strong>Gráfica de Corriente de Armadura (Ia)</strong></div></div>
         </div>
     </div>
 </div>
 
 <script>
-    let chartVaInstance = null;
-    let chartWInstance = null;
-    let chartIaInstance = null;
-    let savedSimulations = [];
-    let simIdCounter = 1;
-    let simulacionActual = null;
-    let animacionInterval = null;
-
+    let chartVaInstance = null; let chartWInstance = null; let chartIaInstance = null;
+    let savedSimulations = []; let simIdCounter = 1; let simulacionActual = null; let animacionInterval = null;
     const colors = ['#007bff', '#dc3545', '#28a745', '#ffc107', '#6f42c1', '#fd7e14', '#20c997', '#e83e8c'];
 
     const waveInfoData = {
-        'step': {
-            svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 12,18 12,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>',
-            title: 'Escalón Unitario',
-            desc: 'Aplica la tensión máxima instantáneamente.'
-        },
-        'square': {
-            svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 6,18 6,2 18,2 18,18 30,18 30,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>',
-            title: 'Onda Cuadrada',
-            desc: 'Alterna bruscamente entre tensión máxima y cero (PWM).'
-        },
-        'ramp': {
-            svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 8,18 32,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>',
-            title: 'Rampa',
-            desc: 'Aumenta la tensión progresivamente (Soft-start).'
-        },
-        'triangle': {
-            svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 11,2 20,18 29,2 38,18" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>',
-            title: 'Onda Triangular',
-            desc: 'Sube y baja linealmente para ensayos de barrido.'
-        },
-        'peru': {
-            svg: '<svg viewBox="0 0 40 20" class="wave-icon"><path d="M 2 18 Q 7 2 12 18 Q 17 2 22 18 Q 27 2 32 18 Q 36 2 38 18" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>',
-            title: 'Rectificada Completa (Red Perú 60Hz)',
-            desc: 'Simula el rizado de red a 120 Hz.'
-        }
+        'step': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 12,18 12,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Escalón Unitario', desc: 'Aplica tensión máxima instantáneamente en el tiempo de inicio configurado.' },
+        'ramp': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 8,18 32,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Rampa', desc: 'Aumenta la tensión progresivamente según la duración configurada (Soft-start).' },
+        'square': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 6,18 6,2 18,2 18,18 30,18 30,2 38,2" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Cuadrada', desc: 'Alterna bruscamente evaluando el Periodo y Polaridad.' },
+        'sine': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><path d="M 2 10 Q 11 -6 20 10 Q 29 26 38 10" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Senoidal', desc: 'Señal alterna pura. Evalúa la respuesta en frecuencia.' },
+        'triangle': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><polyline points="2,18 11,2 20,18 29,2 38,18" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Onda Triangular', desc: 'Sube y baja linealmente respetando el Periodo.' },
+        'peru': { svg: '<svg viewBox="0 0 40 20" class="wave-icon"><path d="M 2 18 Q 7 2 12 18 Q 17 2 22 18 Q 27 2 32 18 Q 36 2 38 18" fill="none" stroke="#007bff" stroke-width="2.5"/></svg>', title: 'Rectificada Completa', desc: 'Simula el rizado de red comercial rectificada.' }
     };
 
     function actualizarInfoOnda() {
-        const selectElement = document.getElementById('signal_type');
-        const type = selectElement ? selectElement.value : 'step';
-        const info = waveInfoData[type] || waveInfoData['step'];
-        const box = document.getElementById('wave-info-box');
-        
-        if (box) {
-            box.innerHTML = `
-                ${info.svg}
-                <div class="wave-text">
-                    <strong>📌 ${info.title}</strong>
-                    ${info.desc}
-                </div>
-            `;
-        }
+        const type = document.getElementById('signal_type').value;
+        const info = waveInfoData[type];
+        document.getElementById('wave-info-box').innerHTML = `${info.svg}<div class="wave-text"><strong>📌 ${info.title}</strong>${info.desc}</div>`;
     }
 
     function initCharts() {
         if (typeof Chart === 'undefined') return;
-        
-        const ctxVa = document.getElementById('chartVa').getContext('2d');
-        const ctxW = document.getElementById('chartW').getContext('2d');
-        const ctxIa = document.getElementById('chartIa').getContext('2d');
-
-        const commonOptions = { 
-            responsive: true, 
-            maintainAspectRatio: false,
-            animation: false, 
-            elements: { point: { radius: 0, hitRadius: 5 } },
-            interaction: { mode: 'index', intersect: false }
-        };
-
-        chartVaInstance = new Chart(ctxVa, {
-            type: 'line',
-            data: { datasets: [] },
-            options: Object.assign({}, commonOptions, { scales: { x: { type: 'linear', title: { display: true, text: 'Tiempo (s)' } }, y: { title: { display: true, text: 'Voltaje Va (V)' } } } })
-        });
-
-        chartWInstance = new Chart(ctxW, {
-            type: 'line',
-            data: { datasets: [] },
-            options: Object.assign({}, commonOptions, { scales: { x: { type: 'linear', title: { display: true, text: 'Tiempo (s)' } }, y: { title: { display: true, text: 'Velocidad ω (rad/s)' } } } })
-        });
-
-        chartIaInstance = new Chart(ctxIa, {
-            type: 'line',
-            data: { datasets: [] },
-            options: Object.assign({}, commonOptions, { scales: { x: { type: 'linear', title: { display: true, text: 'Tiempo (s)' } }, y: { title: { display: true, text: 'Corriente Ia (A)' } } } })
-        });
+        const commonOptions = { responsive: true, maintainAspectRatio: false, animation: false, elements: { point: { radius: 0, hitRadius: 5 } }, interaction: { mode: 'index', intersect: false } };
+        chartVaInstance = new Chart(document.getElementById('chartVa').getContext('2d'), { type: 'line', data: { datasets: [] }, options: Object.assign({}, commonOptions, { scales: { x: { title: { display: true, text: 'Tiempo (s)' } }, y: { title: { display: true, text: 'Voltaje Va (V)' } } } }) });
+        chartWInstance = new Chart(document.getElementById('chartW').getContext('2d'), { type: 'line', data: { datasets: [] }, options: Object.assign({}, commonOptions, { scales: { x: { title: { display: true, text: 'Tiempo (s)' } }, y: { title: { display: true, text: 'Velocidad ω (rad/s)' } } } }) });
+        chartIaInstance = new Chart(document.getElementById('chartIa').getContext('2d'), { type: 'line', data: { datasets: [] }, options: Object.assign({}, commonOptions, { scales: { x: { title: { display: true, text: 'Tiempo (s)' } }, y: { title: { display: true, text: 'Corriente Ia (A)' } } } }) });
     }
 
     function obtenerDatos() {
-        const defaultValues = {
-            'r_a': 2.2, 'l_a': 0.45, 'v_f': 15, 'r_f': 12, 
-            'j': 0.003, 'b': 0.002, 'k_t': 0.15, 'k_v': 0.15, 
-            'v_a': 24, 't_l': 0.3, 't_load': 0
-        };
-        
-        const values = {};
-        for (let id in defaultValues) {
-            const element = document.getElementById(id);
-            let val = element.value;
-            if (val === '' || isNaN(val)) {
-                val = defaultValues[id]; 
-                element.value = val; 
-            }
-            values[id] = parseFloat(val);
+        const defs = { 'r_a': 2.2, 'l_a': 0.45, 'v_f': 15, 'r_f': 12, 'j': 0.003, 'b': 0.002, 'k_t': 0.15, 'k_v': 0.15, 'v_a': 24, 't_l': 0.3, 't_load': 0, 't_start_v': 0, 'period_v': 2, 't_ramp': 1.5 };
+        const v = {};
+        for (let id in defs) {
+            let el = document.getElementById(id); let val = el.value;
+            if (val === '' || isNaN(val)) { val = defs[id]; el.value = val; }
+            v[id] = parseFloat(val);
         }
-        values.signal_type = document.getElementById('signal_type').value;
-        values.signal_name = waveInfoData[values.signal_type].title;
-        return values;
+        v.signal_type = document.getElementById('signal_type').value;
+        v.signal_name = waveInfoData[v.signal_type].title;
+        v.polarity_v = document.getElementById('polarity_v').value;
+        return v;
     }
 
     function ejecutarModelo(p, conCarga) {
         const If = p.v_f / p.r_f;
-        const dt = p.signal_type === 'peru' ? 0.0002 : 0.001; 
+        const dt = (p.signal_type === 'peru' || p.period_v < 0.1) ? 0.0002 : 0.001; 
         let T_sim = p.signal_type === 'peru' ? 0.2 : 6; 
 
         let ia = 0, w = 0, t = 0;
         const dataVa = [], dataW = [], dataIa = [];
-        const saveStep = p.signal_type === 'peru' ? (0.001 / dt) : (0.01 / dt);
+        const saveStep = dt < 0.001 ? (0.001 / dt) : (0.01 / dt);
 
-        // --- FORZAR PUNTO INICIAL EN 0V PARA VER EL SALTO VERTICAL ---
-        if (p.signal_type === 'step' || p.signal_type === 'square') {
-            dataVa.push({ x: 0, y: 0 }); 
-        }
-        // -------------------------------------------------------------
+        if ((p.signal_type === 'step' || p.signal_type === 'square') && p.t_start_v === 0) dataVa.push({ x: 0, y: 0 });
 
         for (let i = 0; i <= T_sim / dt; i++) {
             t = i * dt;
             let va_t = 0;
 
-            switch(p.signal_type) {
-                case 'step': va_t = p.v_a; break;
-                case 'square': va_t = (t % 2.0 < 1.0) ? p.v_a : 0; break;
-                case 'ramp': va_t = Math.min(p.v_a, (p.v_a / 1.5) * t); break; 
-                case 'triangle': va_t = p.v_a * (1 - Math.abs((t % 2.0) - 1.0)); break;
-                case 'peru': va_t = p.v_a * Math.abs(Math.sin(2 * Math.PI * 60 * t)); break;
+            if (t >= p.t_start_v) {
+                let t_v = t - p.t_start_v; // Tiempo relativo a la señal
+                
+                switch(p.signal_type) {
+                    case 'step': 
+                        va_t = p.v_a; 
+                        break;
+                    case 'square': 
+                        let cycle_sq = t_v % p.period_v;
+                        va_t = (cycle_sq < p.period_v / 2) ? p.v_a : (p.polarity_v === 'bipolar' ? -p.v_a : 0);
+                        break;
+                    case 'ramp': 
+                        va_t = t_v <= p.t_ramp ? (p.v_a / p.t_ramp) * t_v : p.v_a; 
+                        break;
+                    case 'triangle': 
+                        let norm_tr = (t_v % p.period_v) / p.period_v;
+                        if (p.polarity_v === 'unipolar') {
+                            va_t = norm_tr < 0.5 ? 2 * p.v_a * norm_tr : 2 * p.v_a * (1 - norm_tr);
+                        } else {
+                            if (norm_tr < 0.25) va_t = 4 * p.v_a * norm_tr;
+                            else if (norm_tr < 0.75) va_t = p.v_a - 4 * p.v_a * (norm_tr - 0.25);
+                            else va_t = -p.v_a + 4 * p.v_a * (norm_tr - 0.75);
+                        }
+                        break;
+                    case 'sine':
+                        let wt = 2 * Math.PI * (1 / p.period_v) * t_v;
+                        va_t = p.v_a * Math.sin(wt);
+                        if (p.polarity_v === 'unipolar') va_t = Math.max(0, va_t);
+                        break;
+                    case 'peru': 
+                        va_t = p.v_a * Math.abs(Math.sin(2 * Math.PI * 60 * t_v)); 
+                        break;
+                }
+            } else {
+                va_t = 0; // Antes de que inicie la tensión
             }
 
             let current_tl = 0;
             if (conCarga) {
-                let t_start = p.t_load;
+                let t_load_start = p.t_load;
                 let trans_duration = p.signal_type === 'peru' ? 0.02 : 1.0; 
-                if (t < t_start) {
-                    current_tl = 0;
-                } else if (t >= t_start && t <= t_start + trans_duration) {
-                    current_tl = p.t_l * ((t - t_start) / trans_duration); 
-                } else {
+                if (t >= t_load_start && t <= t_load_start + trans_duration) {
+                    current_tl = p.t_l * ((t - t_load_start) / trans_duration); 
+                } else if (t > t_load_start + trans_duration) {
                     current_tl = p.t_l; 
                 }
             }
@@ -322,13 +261,9 @@
             let dia_dt = (va_t - p.r_a * ia - p.k_v * w * If) / p.l_a;
             let dw_dt = (p.k_t * If * ia - p.b * w - current_tl) / p.j;
 
-            if (w < 0 && dw_dt < 0 && va_t === 0) {
-                w = 0;
-                dw_dt = 0;
-            }
+            if (w < 0 && dw_dt < 0 && va_t === 0) { w = 0; dw_dt = 0; }
 
-            ia += dia_dt * dt;
-            w += dw_dt * dt;
+            ia += dia_dt * dt; w += dw_dt * dt;
 
             if (i % Math.round(saveStep) === 0) { 
                 dataVa.push({ x: parseFloat(t.toFixed(4)), y: parseFloat(va_t.toFixed(2)) });
@@ -341,139 +276,26 @@
 
     function calcularGrafica(conCarga) {
         if (animacionInterval) clearInterval(animacionInterval);
-        const params = obtenerDatos();
-        const results = ejecutarModelo(params, conCarga);
-        
-        let labelCorto = waveInfoData[params.signal_type].title;
-        let titulo_etiqueta = `${labelCorto} | Va:${params.v_a}V`;
-        titulo_etiqueta += conCarga ? ` | Carga: ${params.t_l}N·m (t=${params.t_load}s)` : ` | Sin Carga`;
-
+        const params = obtenerDatos(); const results = ejecutarModelo(params, conCarga);
+        let titulo_etiqueta = `${waveInfoData[params.signal_type].title} | Va:${params.v_a}V`;
+        titulo_etiqueta += conCarga ? ` | Carga: ${params.t_l}N·m` : ` | Sin Carga`;
         simulacionActual = { params, dataVa: results.dataVa, dataW: results.dataW, dataIa: results.dataIa, label: titulo_etiqueta };
 
-        chartVaInstance.data.datasets = [{ label: `Voltaje - ${titulo_etiqueta}`, borderColor: '#28a745', borderWidth: 2, data: results.dataVa }];
-        chartVaInstance.update();
-
-        chartWInstance.data.datasets = [{ label: `Velocidad - ${titulo_etiqueta}`, borderColor: conCarga ? '#fd7e14' : '#007bff', borderWidth: 2, data: results.dataW }];
-        chartWInstance.update();
-
-        chartIaInstance.data.datasets = [{ label: `Corriente - ${titulo_etiqueta}`, borderColor: conCarga ? '#fd7e14' : '#007bff', borderWidth: 2, data: results.dataIa }];
-        chartIaInstance.update();
-
+        chartVaInstance.data.datasets = [{ label: `Voltaje - ${titulo_etiqueta}`, borderColor: '#28a745', borderWidth: 2, data: results.dataVa }]; chartVaInstance.update();
+        chartWInstance.data.datasets = [{ label: `Velocidad - ${titulo_etiqueta}`, borderColor: conCarga ? '#fd7e14' : '#007bff', borderWidth: 2, data: results.dataW }]; chartWInstance.update();
+        chartIaInstance.data.datasets = [{ label: `Corriente - ${titulo_etiqueta}`, borderColor: conCarga ? '#fd7e14' : '#007bff', borderWidth: 2, data: results.dataIa }]; chartIaInstance.update();
         document.getElementById('btnGuardar').disabled = false;
     }
 
     function guardarSimulacion() {
         if (!simulacionActual) return;
-        const color = colors[savedSimulations.length % colors.length];
-        const sim = {
-            id: simIdCounter++,
-            params: simulacionActual.params,
-            dataVa: simulacionActual.dataVa,
-            dataW: simulacionActual.dataW,
-            dataIa: simulacionActual.dataIa,
-            color,
-            label: simulacionActual.label
-        };
-        savedSimulations.push(sim);
-        actualizarTabla();
-        simulacionActual = null;
-        document.getElementById('btnGuardar').disabled = true;
-        mostrarGraficoIndividual(sim.id); 
+        const sim = { id: simIdCounter++, params: simulacionActual.params, dataVa: simulacionActual.dataVa, dataW: simulacionActual.dataW, dataIa: simulacionActual.dataIa, color: colors[savedSimulations.length % colors.length], label: simulacionActual.label };
+        savedSimulations.push(sim); actualizarTabla(); simulacionActual = null;
+        document.getElementById('btnGuardar').disabled = true; mostrarGraficoIndividual(sim.id); 
     }
 
     function actualizarTabla() {
-        const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = '';
+        const tbody = document.getElementById('tableBody'); tbody.innerHTML = '';
         savedSimulations.forEach(sim => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${sim.id}</td>
-                <td title="${sim.label}">${sim.params.signal_name}</td>
-                <td>${sim.params.v_a}</td>
-                <td>${sim.params.t_l}</td>
-                <td>
-                    <button class="btn btn-show" onclick="mostrarGraficoIndividual(${sim.id})">Mostrar</button>
-                    <button class="btn btn-delete" onclick="eliminarSimulacion(${sim.id})">X</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-
-    function eliminarSimulacion(id) {
-        savedSimulations = savedSimulations.filter(s => s.id !== id);
-        actualizarTabla();
-        chartVaInstance.data.datasets = [];
-        chartWInstance.data.datasets = [];
-        chartIaInstance.data.datasets = [];
-        chartVaInstance.update();
-        chartWInstance.update();
-        chartIaInstance.update();
-    }
-
-    function mostrarGraficoIndividual(id) {
-        if (animacionInterval) clearInterval(animacionInterval);
-        const sim = savedSimulations.find(s => s.id === id);
-        if (!sim) return;
-
-        chartVaInstance.data.datasets = [{ label: `Voltaje - ${sim.label}`, borderColor: sim.color, borderWidth: 2, data: sim.dataVa }];
-        chartVaInstance.update();
-
-        chartWInstance.data.datasets = [{ label: `Velocidad - ${sim.label}`, borderColor: sim.color, borderWidth: 2, data: sim.dataW }];
-        chartWInstance.update();
-
-        chartIaInstance.data.datasets = [{ label: `Corriente - ${sim.label}`, borderColor: sim.color, borderWidth: 2, data: sim.dataIa }];
-        chartIaInstance.update();
-    }
-
-    function compararGraficosAnimados() {
-        if (animacionInterval) clearInterval(animacionInterval);
-        if (savedSimulations.length === 0) {
-            alert('No hay simulaciones guardadas para comparar.');
-            return;
-        }
-
-        chartVaInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, borderWidth: 1.5, data: [] }));
-        chartWInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, borderWidth: 1.5, data: [] }));
-        chartIaInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, borderWidth: 1.5, data: [] }));
-
-        let index = 0;
-        const maxPoints = Math.max(...savedSimulations.map(sim => sim.dataW.length));
-        const chunkSize = 1; 
-
-        animacionInterval = setInterval(() => {
-            let endIndex = Math.min(index + chunkSize, maxPoints);
-
-            savedSimulations.forEach((sim, idx) => {
-                chartVaInstance.data.datasets[idx].data = sim.dataVa.slice(0, endIndex);
-                chartWInstance.data.datasets[idx].data = sim.dataW.slice(0, endIndex);
-                chartIaInstance.data.datasets[idx].data = sim.dataIa.slice(0, endIndex);
-            });
-
-            chartVaInstance.update('none');
-            chartWInstance.update('none');
-            chartIaInstance.update('none');
-
-            index = endIndex;
-            if (index >= maxPoints) {
-                clearInterval(animacionInterval);
-            }
-        }, 80); 
-    }
-
-    document.addEventListener("DOMContentLoaded", function() {
-        actualizarInfoOnda(); 
-        let intentos = 0;
-        let intervalo = setInterval(() => {
-            if (typeof Chart !== 'undefined') {
-                clearInterval(intervalo);
-                initCharts();
-            }
-            intentos++;
-            if (intentos > 15) clearInterval(intervalo);
-        }, 300);
-    });
-</script>
-
-</body>
-</html>
+            tr.innerHTML = `<td>${sim.id}</td><td title="${sim.label}">${sim.params.signal_name}</td><td>${sim.params.v_a}</td><td>${sim.params.t_l}</td><td><button class="btn btn-show" onclick="mostrarGraficoIndividual(${sim.id})">Mostrar</button> <button class="btn btn-de
