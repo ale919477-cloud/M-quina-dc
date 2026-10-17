@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Simulador de Motor DC - Análisis Avanzado Dinámico</title>
+    <title>Simulador de Motor DC - Análisis Avanzado Definitivo</title>
     <!-- Librería de Gráficas -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -96,7 +96,7 @@
 
                     <!-- Campos base SIEMPRE visibles -->
                     <div class="input-group"><label>Amplitud Tensión (V)</label><input type="number" id="v_a" value="24" step="any"></div>
-                    <div class="input-group"><label>Inicio Señal (s)</label><input type="number" id="t_start_v" value="0" step="any" title="Segundo en el que ingresa el voltaje"></div>
+                    <div class="input-group"><label>Inicio Señal (s)</label><input type="number" id="t_start_v" value="1" step="any" title="Segundo en el que ingresa el voltaje"></div>
                     
                     <!-- Campos Dinámicos (Ocultos/Mostrados por JS) -->
                     <div class="input-group dyn-field" id="grp_ramp" style="display: none;">
@@ -119,7 +119,7 @@
                     
                     <!-- Carga Mecánica SIEMPRE visible -->
                     <div class="input-group"><label>Par Carga T_L (N·m)</label><input type="number" id="t_l" value="0.3" step="any"></div>
-                    <div class="input-group"><label>Inicio Carga (s)</label><input type="number" id="t_load" value="0" step="any"></div>
+                    <div class="input-group"><label>Inicio Carga (s)</label><input type="number" id="t_load" value="3" step="any"></div>
                 </div>
 
                 <div class="wave-info-box" id="wave-info-box">
@@ -198,21 +198,46 @@
 
     function initCharts() {
         if (typeof Chart === 'undefined') return;
+        
+        // LA CLAVE ESTÁ AQUÍ: type: 'scatter' y showLine: true
+        // Esto obliga a Chart.js a leer (X, Y) estrictamente como números cartesianos.
         const commonOptions = { 
             responsive: true, 
             maintainAspectRatio: false, 
             animation: false, 
-            elements: { point: { radius: 0, hitRadius: 5 } }, 
-            interaction: { mode: 'index', intersect: false } 
+            showLine: true, // Esto hace que el scatter parezca una línea continua
+            elements: { point: { radius: 0, hitRadius: 5 }, line: { borderWidth: 2 } }, 
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                x: { 
+                    type: 'linear', 
+                    position: 'bottom',
+                    title: { display: true, text: 'Tiempo (s)' } 
+                }
+            }
         };
-        // SOLUCIÓN AL EJE Y COLAPSADO: type: 'linear' en el eje X
-        chartVaInstance = new Chart(document.getElementById('chartVa').getContext('2d'), { type: 'line', data: { datasets: [] }, options: Object.assign({}, commonOptions, { scales: { x: { type: 'linear', title: { display: true, text: 'Tiempo (s)' } }, y: { title: { display: true, text: 'Voltaje Va (V)' } } } }) });
-        chartWInstance = new Chart(document.getElementById('chartW').getContext('2d'), { type: 'line', data: { datasets: [] }, options: Object.assign({}, commonOptions, { scales: { x: { type: 'linear', title: { display: true, text: 'Tiempo (s)' } }, y: { title: { display: true, text: 'Velocidad ω (rad/s)' } } } }) });
-        chartIaInstance = new Chart(document.getElementById('chartIa').getContext('2d'), { type: 'line', data: { datasets: [] }, options: Object.assign({}, commonOptions, { scales: { x: { type: 'linear', title: { display: true, text: 'Tiempo (s)' } }, y: { title: { display: true, text: 'Corriente Ia (A)' } } } }) });
+
+        chartVaInstance = new Chart(document.getElementById('chartVa').getContext('2d'), { 
+            type: 'scatter', 
+            data: { datasets: [] }, 
+            options: Object.assign({}, commonOptions, { scales: { x: commonOptions.scales.x, y: { title: { display: true, text: 'Voltaje Va (V)' } } } }) 
+        });
+        
+        chartWInstance = new Chart(document.getElementById('chartW').getContext('2d'), { 
+            type: 'scatter', 
+            data: { datasets: [] }, 
+            options: Object.assign({}, commonOptions, { scales: { x: commonOptions.scales.x, y: { title: { display: true, text: 'Velocidad ω (rad/s)' } } } }) 
+        });
+        
+        chartIaInstance = new Chart(document.getElementById('chartIa').getContext('2d'), { 
+            type: 'scatter', 
+            data: { datasets: [] }, 
+            options: Object.assign({}, commonOptions, { scales: { x: commonOptions.scales.x, y: { title: { display: true, text: 'Corriente Ia (A)' } } } }) 
+        });
     }
 
     function obtenerDatos() {
-        const defs = { 'r_a': 2.2, 'l_a': 0.45, 'v_f': 15, 'r_f': 12, 'j': 0.003, 'b': 0.002, 'k_t': 0.15, 'k_v': 0.15, 'v_a': 24, 't_start_v': 0, 't_ramp': 1.5, 'period_v': 2, 't_l': 0.3, 't_load': 0 };
+        const defs = { 'r_a': 2.2, 'l_a': 0.45, 'v_f': 15, 'r_f': 12, 'j': 0.003, 'b': 0.002, 'k_t': 0.15, 'k_v': 0.15, 'v_a': 24, 't_start_v': 1, 't_ramp': 1.5, 'period_v': 2, 't_l': 0.3, 't_load': 3 };
         const v = {};
         for (let id in defs) {
             let el = document.getElementById(id); let val = el.value;
@@ -226,23 +251,27 @@
     }
 
     function ejecutarModelo(p, conCarga) {
-        // FORMULAS ORIGINALES INTACTAS
         const If = p.v_f / p.r_f;
         const dt = (p.signal_type === 'peru' || p.period_v < 0.1) ? 0.0002 : 0.001; 
         let T_sim = p.signal_type === 'peru' ? 0.2 : 6; 
+        // Si el inicio es muy tarde, aumentamos el tiempo de simulación para ver la gráfica
+        if(p.t_start_v > 4) T_sim = p.t_start_v + 4;
 
         let ia = 0, w = 0, t = 0;
         const dataVa = [], dataW = [], dataIa = [];
         const saveStep = dt < 0.001 ? (0.001 / dt) : (0.01 / dt);
 
-        if ((p.signal_type === 'step' || p.signal_type === 'square') && p.t_start_v === 0) dataVa.push({ x: 0, y: 0 });
+        if ((p.signal_type === 'step' || p.signal_type === 'square') && p.t_start_v > 0) {
+            dataVa.push({ x: 0, y: 0 });
+            dataVa.push({ x: p.t_start_v - 0.0001, y: 0 }); // Punto previo al salto
+        }
 
         for (let i = 0; i <= T_sim / dt; i++) {
             t = i * dt;
             let va_t = 0;
 
             if (t >= p.t_start_v) {
-                let t_v = t - p.t_start_v; // Tiempo interno del voltaje
+                let t_v = t - p.t_start_v; 
                 
                 switch(p.signal_type) {
                     case 'step': 
@@ -277,7 +306,7 @@
                         break;
                 }
             } else {
-                va_t = 0; // Antes del inicio, V=0
+                va_t = 0; 
             }
 
             let current_tl = 0;
@@ -293,7 +322,6 @@
                 }
             }
 
-            // EDO EXACTAMENTE IGUAL AL INICIO
             let dia_dt = (va_t - p.r_a * ia - p.k_v * w * If) / p.l_a;
             let dw_dt = (p.k_t * If * ia - p.b * w - current_tl) / p.j;
 
@@ -317,9 +345,9 @@
         titulo_etiqueta += conCarga ? ` | Carga: ${params.t_l}N·m` : ` | Sin Carga`;
         simulacionActual = { params, dataVa: results.dataVa, dataW: results.dataW, dataIa: results.dataIa, label: titulo_etiqueta };
 
-        chartVaInstance.data.datasets = [{ label: `Voltaje - ${titulo_etiqueta}`, borderColor: '#28a745', borderWidth: 2, data: results.dataVa }]; chartVaInstance.update();
-        chartWInstance.data.datasets = [{ label: `Velocidad - ${titulo_etiqueta}`, borderColor: conCarga ? '#fd7e14' : '#007bff', borderWidth: 2, data: results.dataW }]; chartWInstance.update();
-        chartIaInstance.data.datasets = [{ label: `Corriente - ${titulo_etiqueta}`, borderColor: conCarga ? '#fd7e14' : '#007bff', borderWidth: 2, data: results.dataIa }]; chartIaInstance.update();
+        chartVaInstance.data.datasets = [{ label: `Voltaje - ${titulo_etiqueta}`, borderColor: '#28a745', backgroundColor: '#28a745', borderWidth: 2, data: results.dataVa }]; chartVaInstance.update();
+        chartWInstance.data.datasets = [{ label: `Velocidad - ${titulo_etiqueta}`, borderColor: conCarga ? '#fd7e14' : '#007bff', backgroundColor: conCarga ? '#fd7e14' : '#007bff', borderWidth: 2, data: results.dataW }]; chartWInstance.update();
+        chartIaInstance.data.datasets = [{ label: `Corriente - ${titulo_etiqueta}`, borderColor: conCarga ? '#fd7e14' : '#007bff', backgroundColor: conCarga ? '#fd7e14' : '#007bff', borderWidth: 2, data: results.dataIa }]; chartIaInstance.update();
         document.getElementById('btnGuardar').disabled = false;
     }
 
@@ -348,18 +376,18 @@
     function mostrarGraficoIndividual(id) {
         if (animacionInterval) clearInterval(animacionInterval);
         const sim = savedSimulations.find(s => s.id === id); if (!sim) return;
-        chartVaInstance.data.datasets = [{ label: `Voltaje - ${sim.label}`, borderColor: sim.color, borderWidth: 2, data: sim.dataVa }]; chartVaInstance.update();
-        chartWInstance.data.datasets = [{ label: `Velocidad - ${sim.label}`, borderColor: sim.color, borderWidth: 2, data: sim.dataW }]; chartWInstance.update();
-        chartIaInstance.data.datasets = [{ label: `Corriente - ${sim.label}`, borderColor: sim.color, borderWidth: 2, data: sim.dataIa }]; chartIaInstance.update();
+        chartVaInstance.data.datasets = [{ label: `Voltaje - ${sim.label}`, borderColor: sim.color, backgroundColor: sim.color, borderWidth: 2, data: sim.dataVa }]; chartVaInstance.update();
+        chartWInstance.data.datasets = [{ label: `Velocidad - ${sim.label}`, borderColor: sim.color, backgroundColor: sim.color, borderWidth: 2, data: sim.dataW }]; chartWInstance.update();
+        chartIaInstance.data.datasets = [{ label: `Corriente - ${sim.label}`, borderColor: sim.color, backgroundColor: sim.color, borderWidth: 2, data: sim.dataIa }]; chartIaInstance.update();
     }
 
     function compararGraficosAnimados() {
         if (animacionInterval) clearInterval(animacionInterval);
         if (savedSimulations.length === 0) { alert('No hay simulaciones guardadas para comparar.'); return; }
 
-        chartVaInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, borderWidth: 1.5, data: [] }));
-        chartWInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, borderWidth: 1.5, data: [] }));
-        chartIaInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, borderWidth: 1.5, data: [] }));
+        chartVaInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, backgroundColor: sim.color, borderWidth: 1.5, data: [] }));
+        chartWInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, backgroundColor: sim.color, borderWidth: 1.5, data: [] }));
+        chartIaInstance.data.datasets = savedSimulations.map(sim => ({ label: sim.label, borderColor: sim.color, backgroundColor: sim.color, borderWidth: 1.5, data: [] }));
 
         let index = 0; const maxPoints = Math.max(...savedSimulations.map(sim => sim.dataW.length));
         animacionInterval = setInterval(() => {
